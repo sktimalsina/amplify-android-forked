@@ -18,6 +18,7 @@ package com.amplifyframework.auth.cognito
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import androidx.annotation.VisibleForTesting
 import aws.sdk.kotlin.services.cognitoidentity.CognitoIdentityClient
 import aws.sdk.kotlin.services.cognitoidentityprovider.CognitoIdentityProviderClient
 import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
@@ -552,7 +553,7 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
                                             "Failed to fetch identity.",
                                             fetchIdentityState.exception,
                                             "Sign in or enable guest access. See the attached exception for more" +
-                                                " details."
+                                                    " details."
                                         )
                                     )
                                 }
@@ -875,16 +876,27 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         )
     }
 
+    @VisibleForTesting
+    internal fun internalConfigure(
+        configuration: AuthConfiguration,
+        authStateMachine: AuthStateMachine,
+        credentialStoreStateMachine: CredentialStoreStateMachine
+    ) {
+        this.configuration = configuration
+        this.authStateMachine = authStateMachine
+        this.credentialStoreStateMachine = credentialStoreStateMachine
+        System.setProperty("aws.frameworkMetadata", UserAgent.string())
+        addAuthStateChangeListener()
+        configureAuthStates()
+    }
+
     @Throws(AmplifyException::class)
     override fun configure(pluginConfiguration: JSONObject, context: Context) {
         try {
-            configuration = AuthConfiguration.fromJson(pluginConfiguration).build()
-            val authEnvironment = AuthEnvironment(configuration, configureCognitoClients(), logger)
-            authStateMachine = AuthStateMachine(authEnvironment)
-            System.setProperty("aws.frameworkMetadata", UserAgent.string())
-
-            configureCredentialStore(pluginConfiguration, context)
-            addAuthStateChangeListener()
+            val configuration = AuthConfiguration.fromJson(pluginConfiguration).build()
+            val authStateMachine = AuthStateMachine(AuthEnvironment(configuration, configureCognitoClients(), logger))
+            val credentialStore = createCredentialStore(pluginConfiguration, context)
+            internalConfigure(configuration, authStateMachine, credentialStore)
         } catch (exception: JSONException) {
             throw AuthException(
                 "Failed to configure AWSCognitoAuthPlugin.",
@@ -892,8 +904,6 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
                 "Make sure your amplifyconfiguration.json is valid."
             )
         }
-
-        configureAuthStates()
     }
 
     private fun configureCognitoClients(): AWSCognitoAuthServiceBehavior {
@@ -911,12 +921,12 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         }
     }
 
-    private fun configureCredentialStore(pluginConfiguration: JSONObject, context: Context) {
+    private fun createCredentialStore(pluginConfiguration: JSONObject, context: Context): CredentialStoreStateMachine {
         val awsCognitoAuthCredentialStore = AWSCognitoAuthCredentialStore(context.applicationContext, configuration)
         val legacyCredentialStore = AWSCognitoLegacyCredentialStore(context.applicationContext, configuration)
         val credentialStoreEnvironment =
             CredentialStoreEnvironment(awsCognitoAuthCredentialStore, legacyCredentialStore)
-        credentialStoreStateMachine = CredentialStoreStateMachine(credentialStoreEnvironment)
+        return CredentialStoreStateMachine(credentialStoreEnvironment)
     }
 
     private fun addAuthStateChangeListener(): StateChangeListenerToken {
