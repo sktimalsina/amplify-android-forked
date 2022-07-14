@@ -5,4 +5,5 @@ import com.amplifyframework.statemachine.codegen.events.SignInEvent
 
 interface SignInActions {
     fun startSRPAuthAction(event: SignInEvent.EventType.InitiateSignInWithSRP): Action
+    fun startHostedUIAuthAction(event: SignInEvent.EventType.InitiateHostedUISignIn): Action
 }

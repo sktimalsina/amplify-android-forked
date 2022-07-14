@@ -34,6 +34,7 @@ import com.amplifyframework.auth.AuthUserAttribute
 import com.amplifyframework.auth.AuthUserAttributeKey
 import com.amplifyframework.auth.cognito.data.AWSCognitoAuthCredentialStore
 import com.amplifyframework.auth.cognito.data.AWSCognitoLegacyCredentialStore
+import com.amplifyframework.auth.cognito.options.HostedUISignInOptions
 import com.amplifyframework.auth.options.AuthConfirmResetPasswordOptions
 import com.amplifyframework.auth.options.AuthConfirmSignInOptions
 import com.amplifyframework.auth.options.AuthConfirmSignUpOptions
@@ -442,7 +443,13 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         onSuccess: Consumer<AuthSignInResult>,
         onError: Consumer<AuthException>
     ) {
-        TODO("Not yet implemented")
+        signInWithSocialWebUI(
+            provider,
+            callingActivity,
+            AuthWebUISignInOptions.builder().build(),
+            onSuccess,
+            onError
+        )
     }
 
     override fun signInWithSocialWebUI(
@@ -452,7 +459,8 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         onSuccess: Consumer<AuthSignInResult>,
         onError: Consumer<AuthException>
     ) {
-        TODO("Not yet implemented")
+        val hostedUIJsonConfig = configuration.oauthConfig!!
+        val hostedUIOptions = HostedUISignInOptions.createSocialWebSignInOptions(options, hostedUIJsonConfig, provider)
     }
 
     override fun signInWithWebUI(
@@ -460,7 +468,12 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         onSuccess: Consumer<AuthSignInResult>,
         onError: Consumer<AuthException>
     ) {
-        TODO("Not yet implemented")
+        signInWithWebUI(
+            callingActivity,
+            AuthWebUISignInOptions.builder().build(),
+            onSuccess,
+            onError
+        )
     }
 
     override fun signInWithWebUI(
@@ -469,7 +482,8 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
         onSuccess: Consumer<AuthSignInResult>,
         onError: Consumer<AuthException>
     ) {
-        TODO("Not yet implemented")
+        val hostedUIJsonConfig = configuration.oauthConfig!!
+        val hostedUIOptions = HostedUISignInOptions.createWebSignInOptions(options, hostedUIJsonConfig)
     }
 
     override fun handleWebUISignInResponse(intent: Intent?) {
@@ -982,7 +996,7 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthServiceBehavior>() {
     @Throws(AmplifyException::class)
     override fun configure(pluginConfiguration: JSONObject, context: Context) {
         try {
-            configuration = AuthConfiguration.fromJson(pluginConfiguration).build()
+            configuration = AuthConfiguration.fromJson(pluginConfiguration)
             val authEnvironment = AuthEnvironment(configuration, configureCognitoClients(), logger)
             authStateMachine = AuthStateMachine(authEnvironment)
             System.setProperty("aws.frameworkMetadata", UserAgent.string())

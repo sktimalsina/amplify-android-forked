@@ -10,7 +10,7 @@ import com.amplifyframework.statemachine.codegen.events.SignInEvent
 sealed class SignInState : State {
     data class NotStarted(val id: String = "") : SignInState()
     data class SigningInWithSRP(override var srpSignInState: SRPSignInState?) : SignInState()
-    data class SigningInWithHostedUI(val id: String = "") : SignInState()
+    data class SigningInWithHostedUI(val hostedUISignInState: HostedUISignInState) : SignInState()
     data class SigningInWithCustom(val id: String = "") : SignInState()
     data class SigningInWithSRPCustom(val id: String = "") : SignInState()
     data class ResolvingSMSChallenge(val id: String = "") : SignInState()
@@ -82,6 +82,7 @@ sealed class SignInState : State {
 
         override fun build(): SignInState = when (signInState) {
             is SigningInWithSRP -> SigningInWithSRP(srpSignInState)
+            //is SigningInWithHostedUI -> SigningInWithHostedUI()
             else -> signInState
         }
     }
