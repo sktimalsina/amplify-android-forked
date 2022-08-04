@@ -6,6 +6,7 @@ orbs:
   getting-started-smoke-test:
     orbs:
       android: circleci/android@2.0.0
+      aws-cli: circleci/aws-cli@3.1.1
 
     jobs:
       android:
@@ -15,15 +16,17 @@ orbs:
           resource-class: xlarge
           tag: 2022.03.1
         steps:
-          - checkout:
-              path: ~/android-canaries
-          - android/create-avd:
-              avd-name: myavd
-              install: true
-              system-image: system-images;android-29;default;x86
-          - android/start-emulator:
-              avd-name: myavd
-          - android/run-tests
+          - checkout
+          - aws-cli/setup:
+              role-arn: ${AWS_ROLE_ARN}
+          - run: lslrasdt
+          - run:
+              name: Invoking lambda
+              command: |
+                payload="{\"jobName\": \"${CIRCLE_JOB}\", \"projectRepoName\": \"${CIRCLE_PROJECT_REPONAME}\"}"
+                echo $payload
+                aws lambda invoke --function-name CircleCIWorkflowFailureHandler --payload "$payload" --cli-binary-format raw-in-base64-out response.json
+              when: on_fail
 
 
 
