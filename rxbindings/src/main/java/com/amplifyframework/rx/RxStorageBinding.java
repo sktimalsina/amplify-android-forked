@@ -212,6 +212,16 @@ public final class RxStorageBinding implements RxStorageCategoryBehavior {
         public void pause() { amplifyOperation.pause();}
 
         @Override
+        public void resume() {
+            amplifyOperation.resume();
+        }
+
+        @Override
+        public void pause() {
+            amplifyOperation.pause();
+        }
+
+        @Override
         public void cancel() {
             amplifyOperation.cancel();
             resultSubject.onComplete();
