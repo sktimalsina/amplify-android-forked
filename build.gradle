@@ -120,6 +120,7 @@ ext {
             rekognition: "aws.sdk.kotlin:rekognition:$awsKotlinSdkVersion",
             textract: "aws.sdk.kotlin:textract:$awsKotlinSdkVersion",
             translate: "aws.sdk.kotlin:translate:$awsKotlinSdkVersion",
+            cloudwatchlogs: "aws.sdk.kotlin:cloudwatchlogs:$awsKotlinSdkVersion"
         ],
         kotlin: [
             stdlib: 'org.jetbrains.kotlin:kotlin-stdlib:1.7.10',

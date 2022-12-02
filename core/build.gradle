@@ -34,6 +34,7 @@ dependencies {
     implementation dependency.kotlin.serializationJson
 
     implementation dependency.aws.credentials
+    implementation dependency.aws.cloudwatchlogs
 
     testImplementation project(path: ':aws-api-appsync') // Used to reference Temporal types in tests.
     testImplementation project(path: ':testmodels')
