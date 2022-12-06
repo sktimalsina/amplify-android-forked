@@ -198,15 +198,18 @@ public final class RxStorageBinding implements RxStorageCategoryBehavior {
                                                 resultSubject::onError);
         }
 
+        @NonNull
+        public String getTransferId() {
+            return amplifyOperation.getTransferId();
+        }
+
         @Override
         public void resume() {
             amplifyOperation.resume();
         }
 
         @Override
-        public void pause() {
-            amplifyOperation.pause();
-        }
+        public void pause() { amplifyOperation.pause();}
 
         @Override
         public void cancel() {
