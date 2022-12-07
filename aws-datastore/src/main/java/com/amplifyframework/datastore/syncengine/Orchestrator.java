@@ -93,6 +93,8 @@ public final class Orchestrator {
         Objects.requireNonNull(appSync);
         Objects.requireNonNull(localStorageAdapter);
 
+        LOG.error("ORCHESTRATOR:START");
+
         this.mutationOutbox = new PersistentMutationOutbox(localStorageAdapter);
         VersionRepository versionRepository = new VersionRepository(localStorageAdapter);
         Merger merger = new Merger(mutationOutbox, versionRepository, localStorageAdapter);
@@ -176,11 +178,11 @@ public final class Orchestrator {
             return Completable.error(new DataStoreException("Interrupted while acquiring orchestrator lock.",
                     "Retry your request."));
         }
-        LOG.info("Orchestrator lock acquired.");
+        LOG.info("XXXXXXX  Orchestrator lock acquired.");
         return Completable.fromAction(action)
             .doFinally(() -> {
                 startStopSemaphore.release();
-                LOG.info("Orchestrator lock released.");
+                LOG.info("YYYYY Orchestrator lock released.");
             }
         );
     }
