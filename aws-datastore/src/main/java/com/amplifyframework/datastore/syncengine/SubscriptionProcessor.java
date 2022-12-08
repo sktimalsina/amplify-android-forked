@@ -144,7 +144,7 @@ final class SubscriptionProcessor {
 
         boolean subscriptionsStarted;
         try {
-            LOG.debug("Waiting for subscriptions to start.");
+            LOG.info("Waiting for subscriptions to start.");
             subscriptionsStarted = latch.abortableAwait(adjustedTimeoutSeconds, TimeUnit.SECONDS);
         } catch (InterruptedException exception) {
             LOG.warn("Subscription operations were interrupted during setup.");
@@ -187,7 +187,7 @@ final class SubscriptionProcessor {
             Cancelable cancelable = method.subscribe(
                 modelSchema,
                 token -> {
-                    LOG.debug("Subscription started for " + subscriptionType.name() + " " + modelSchema.getName() +
+                    LOG.info("Subscription started for " + subscriptionType.name() + " " + modelSchema.getName() +
                             " subscriptionId: " + token);
                     subscriptionId.set(token);
                     latch.countDown();
@@ -217,7 +217,7 @@ final class SubscriptionProcessor {
                     }
                 },
                 () -> {
-                    LOG.debug("Subscription completed:" + subscriptionId.get());
+                    LOG.info("Subscription completed:" + subscriptionId.get());
                     emitter.onComplete();
                 }
             );

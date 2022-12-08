@@ -18,7 +18,9 @@ package com.amplifyframework.datastore.syncengine;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.amplifyframework.core.Amplify;
 import com.amplifyframework.core.model.Model;
+import com.amplifyframework.logging.Logger;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -30,6 +32,7 @@ import java.util.Map;
  * MutationQueue is implementing the Queue interface and provide most of the queue operations,
  */
 public final class MutationQueue {
+    private static final Logger LOG = Amplify.Logging.forNamespace("amplify:aws-datastore");
 
     private final Map<TimeBasedUuid, Node> mutationMap = new HashMap<>();
     private final Node dummyHead;
@@ -73,6 +76,7 @@ public final class MutationQueue {
      * @return {@link Boolean} return true if remove is successful
      */
     synchronized boolean removeById(TimeBasedUuid timeBasedUuid) {
+        LOG.info("MutationQueue.removeById(): " + timeBasedUuid);
         if (!mutationMap.containsKey(timeBasedUuid)) {
             return false;
         }
@@ -94,6 +98,7 @@ public final class MutationQueue {
      * @return true if successfully added a pending mutation
      */
     private synchronized boolean addToTail(@NonNull PendingMutation<? extends Model> pendingMutation) {
+        LOG.info("MutationQueue.addToTail(): " + pendingMutation);
         //constructing a new node
         Node pendingNode = new Node();
         pendingNode.id = pendingMutation.getMutationId();
@@ -117,6 +122,7 @@ public final class MutationQueue {
      */
     synchronized void updateExistingQueueItemOrAppendNew(@NonNull TimeBasedUuid timeBasedUuid,
                                                          @NonNull PendingMutation<? extends Model> pendingMutation) {
+        LOG.info("MutationQueue.updateExistingQueueItemOrAppendNew(): " + pendingMutation);
         // If there is already a mutation with same ID in the queue,
         // we'll go find it, and then update it, with this contents.
         if (mutationMap.containsKey(timeBasedUuid)) {
@@ -157,6 +163,7 @@ public final class MutationQueue {
      * @return return true if we successfully added the pending mutation into the queue
      */
     public boolean add(PendingMutation<? extends Model> pendingMutation) {
+        LOG.info("MutationQueue.add(): " + pendingMutation);
         if (pendingMutation != null && !mutationMap.containsKey(pendingMutation.getMutationId())) {
             return addToTail(pendingMutation);
         } else {
@@ -180,6 +187,7 @@ public final class MutationQueue {
      * @return return true if remove is successful
      */
     public boolean remove(@Nullable Object removingObject) {
+        LOG.info("MutationQueue.remove(): " + removingObject);
         if (removingObject instanceof PendingMutation) {
             return removeById(((PendingMutation) removingObject).getMutationId());
         } else {
@@ -191,6 +199,7 @@ public final class MutationQueue {
      * Clear the entire queue.
      */
     public synchronized void clear() {
+        LOG.info("MutationQueue.clear()");
         dummyHead.next = dummyTail;
         dummyTail.prev = dummyHead;
         mutationMap.clear();

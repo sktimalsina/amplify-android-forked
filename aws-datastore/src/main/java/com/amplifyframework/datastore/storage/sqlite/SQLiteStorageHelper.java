@@ -213,7 +213,7 @@ final class SQLiteStorageHelper extends SQLiteOpenHelper implements ModelUpdateS
                     continue;
                 }
                 sqliteDatabase.execSQL("DROP TABLE IF EXISTS " + Wrap.inBackticks(table));
-                LOG.debug("Dropped table: " + table);
+                LOG.info("Dropped table: " + table);
             }
             sqliteDatabase.execSQL("PRAGMA foreign_keys = ON;");
             sqliteDatabase.setTransactionSuccessful();

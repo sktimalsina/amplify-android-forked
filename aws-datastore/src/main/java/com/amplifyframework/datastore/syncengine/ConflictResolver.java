@@ -91,11 +91,11 @@ final class ConflictResolver {
 
         return Single
             .<ConflictResolutionDecision<? extends Model>>create(emitter -> {
-                LOG.debug("Invoking conflict handler");
+                LOG.info("Invoking conflict handler");
                 conflictHandler.onConflictDetected(conflictData, emitter::onSuccess);
             })
             .flatMap(decision -> {
-                LOG.debug(String.format("Conflict handler decision: %s", decision));
+                LOG.info(String.format("Conflict handler decision: %s", decision));
                 @SuppressWarnings("unchecked")
                 ConflictResolutionDecision<T> typedDecision = (ConflictResolutionDecision<T>) decision;
                 return resolveModelAndMetadata(conflictData, metadata, typedDecision);

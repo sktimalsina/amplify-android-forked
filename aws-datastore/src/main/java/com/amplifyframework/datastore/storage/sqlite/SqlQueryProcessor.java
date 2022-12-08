@@ -62,7 +62,7 @@ class SqlQueryProcessor {
         final List<T> models = new ArrayList<>();
 
         try (Cursor cursor = sqlCommandProcessor.rawQuery(sqlCommandFactory.queryFor(modelSchema, options))) {
-            LOG.debug("Querying item for: " + itemClass.getSimpleName());
+            LOG.info("Querying item for: " + itemClass.getSimpleName());
             final SQLiteModelFieldTypeConverter converter =
                     new SQLiteModelFieldTypeConverter(modelSchema, modelSchemaRegistry, gson);
 

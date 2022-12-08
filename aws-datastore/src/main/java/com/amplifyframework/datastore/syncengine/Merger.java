@@ -113,7 +113,7 @@ final class Merger {
                 // Let the world know that we've done a good thing.
                 .doOnComplete(() -> {
                     announceSuccessfulMerge(modelWithMetadata);
-                    LOG.debug("Remote model update was sync'd down into local storage: " + modelWithMetadata);
+                    LOG.info("Remote model update was sync'd down into local storage: " + modelWithMetadata);
                 })
                 // Remote store may not always respect the foreign key constraint, so
                 // swallow any error caused by foreign key constraint violation.
@@ -131,7 +131,7 @@ final class Merger {
         .doOnSubscribe(disposable -> startTime.set(System.currentTimeMillis()))
         .doOnTerminate(() -> {
             long duration = System.currentTimeMillis() - startTime.get();
-            LOG.verbose("Merged a single item in " + duration + " ms.");
+            LOG.info("Merged a single item in " + duration + " ms.");
         });
     }
 
@@ -155,7 +155,7 @@ final class Merger {
                     emitter.onComplete();
                 },
                 failure -> {
-                    LOG.verbose(
+                    LOG.info(
                         "Failed to delete a model while merging. Perhaps it was already gone? "
                         + android.util.Log.getStackTraceString(failure)
                     );

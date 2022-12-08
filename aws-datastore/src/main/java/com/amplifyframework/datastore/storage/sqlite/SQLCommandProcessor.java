@@ -47,7 +47,7 @@ final class SQLCommandProcessor {
         try {
             long startTime = System.currentTimeMillis();
             Cursor result = sqliteDatabase.rawQuery(command.sqlStatement(), command.getBindingsAsArray());
-            LOG.verbose("SQLCommandProcessor rawQuery in " + (System.currentTimeMillis() - startTime)
+            LOG.info("SQLCommandProcessor rawQuery in " + (System.currentTimeMillis() - startTime)
                     + " ms inTransaction: " + sqliteDatabase.inTransaction() + " SQL: " + command.sqlStatement());
             return result;
         } catch (SQLException sqlException) {
@@ -61,7 +61,7 @@ final class SQLCommandProcessor {
             long startTime = System.currentTimeMillis();
             bindValuesToStatement(sqliteStatement, command.getBindings());
             boolean result = sqliteStatement.simpleQueryForLong() > 0;
-            LOG.verbose("SQLCommandProcessor executeExists in " + (System.currentTimeMillis() - startTime)
+            LOG.info("SQLCommandProcessor executeExists in " + (System.currentTimeMillis() - startTime)
                     + " ms inTransaction: " + sqliteDatabase.inTransaction() + " SQL: " + command.sqlStatement());
             return result;
         } catch (SQLException sqlException) {
@@ -75,7 +75,7 @@ final class SQLCommandProcessor {
             long startTime = System.currentTimeMillis();
             bindValuesToStatement(sqliteStatement, command.getBindings());
             sqliteStatement.execute();
-            LOG.verbose("SQLCommandProcessor execute in " + (System.currentTimeMillis() - startTime)
+            LOG.info("SQLCommandProcessor execute in " + (System.currentTimeMillis() - startTime)
                     + " ms inTransaction: " + sqliteDatabase.inTransaction() + " SQL: " + command.sqlStatement());
         } catch (SQLException sqlException) {
             throw dataStoreException(sqlException, command.sqlStatement());
@@ -110,7 +110,7 @@ final class SQLCommandProcessor {
             int columnIndex,
             Object value
     ) throws DataStoreException {
-        LOG.verbose("SQLCommandProcessor.bindValueToStatement(..., value = " + value);
+        LOG.info("SQLCommandProcessor.bindValueToStatement(..., value = " + value);
         if (value == null) {
             statement.bindNull(columnIndex);
         } else if (value instanceof String) {

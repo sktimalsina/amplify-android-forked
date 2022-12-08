@@ -63,13 +63,13 @@ public final class RetryStrategy {
 
         @Override
         public boolean retryHandler(int attemptNumber, Throwable throwable) {
-            LOG.verbose("Should retry? attempt number:" + attemptNumber + " exception type:" + throwable.getClass());
+            LOG.info("Should retry? attempt number:" + attemptNumber + " exception type:" + throwable.getClass());
             if (skipExceptionTypes.contains(throwable.getClass())) {
                 // If it's part of the skip list, don't retry.
                 return false;
             } else {
                 final long waitTimeSeconds = Double.valueOf(Math.pow(2, attemptNumber % maxExponent)).longValue();
-                LOG.debug("Waiting " + waitTimeSeconds + " seconds before retrying");
+                LOG.info("Waiting " + waitTimeSeconds + " seconds before retrying");
                 Completable.timer(TimeUnit.SECONDS.toMillis(waitTimeSeconds), TimeUnit.MILLISECONDS).blockingAwait();
                 return true;
             }
