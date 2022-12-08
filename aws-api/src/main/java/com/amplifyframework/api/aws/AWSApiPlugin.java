@@ -146,6 +146,8 @@ public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
             okHttpClientBuilder.addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string));
             HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
             interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+            interceptor.redactHeader("Authorization");
+            interceptor.redactHeader("Cookie");
             okHttpClientBuilder.addInterceptor(interceptor);
             okHttpClientBuilder.eventListener(new ApiConnectionEventListener());
 
