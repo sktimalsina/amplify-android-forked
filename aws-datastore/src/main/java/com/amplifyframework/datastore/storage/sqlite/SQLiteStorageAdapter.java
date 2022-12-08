@@ -424,7 +424,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         threadPool.submit(() -> {
             final ModelSchema modelSchema = schemaRegistry.getModelSchemaForModelClass(modelName);
             try (Cursor cursor = sqlCommandProcessor.rawQuery(sqlCommandFactory.queryFor(modelSchema, options))) {
-                LOG.debug("Querying item for: " + modelName);
+                LOG.info("Querying item for: " + modelName);
 
                 final List<Model> models = new ArrayList<>();
                 final SQLiteModelFieldTypeConverter converter =
@@ -478,7 +478,7 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
 
                 // Check if data being deleted exists; "Succeed" deletion in that case.
                 if (!sqlQueryProcessor.modelExists(item, QueryPredicates.all())) {
-                    LOG.verbose(modelName + " model with id = " + item.getPrimaryKeyString() + " does not exist.");
+                    LOG.info(modelName + " model with id = " + item.getPrimaryKeyString() + " does not exist.");
                     // Pass back item change instance without publishing it.
                     onSuccess.accept(StorageItemChange.<T>builder()
                         .item(item)
@@ -708,25 +708,25 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
     public synchronized void clear(@NonNull Action onComplete,
                                    @NonNull Consumer<DataStoreException> onError) {
         try {
-            LOG.debug("Shutting down thread pool for the storage adapter.");
+            LOG.info("Shutting down thread pool for the storage adapter.");
             threadPool.shutdown();
             if (!threadPool.awaitTermination(THREAD_POOL_TERMINATE_TIMEOUT, TimeUnit.MILLISECONDS)) {
                 threadPool.shutdownNow();
             }
-            LOG.debug("Storage adapter thread pool shutdown.");
+            LOG.info("Storage adapter thread pool shutdown.");
         } catch (InterruptedException exception) {
             LOG.warn("Storage adapter thread pool was interrupted during shutdown.", exception);
         }
         sqliteStorageHelper.close();
         databaseConnectionHandle.close();
-        LOG.debug("Clearing DataStore.");
+        LOG.info("Clearing DataStore.");
         if (!context.deleteDatabase(databaseName)) {
             DataStoreException dataStoreException = new DataStoreException(
                 "Error while trying to clear data from the local DataStore storage.",
                 "See attached exception for details.");
             onError.accept(dataStoreException);
         }
-        LOG.debug("DataStore cleared. Re-initializing storage adapter.");
+        LOG.info("DataStore cleared. Re-initializing storage adapter.");
 
         //Re-initialize the adapter.
         initialize(context,
@@ -760,20 +760,22 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
         final ModelSchema modelSchema = schemaRegistry.getModelSchemaForModelClass(modelName);
         final SQLiteTable sqliteTable = SQLiteTable.fromSchema(modelSchema);
 
+        LOG.info("About to write item to local storage: " + item);
+
         // Generate SQL command for given action
         switch (writeType) {
             case CREATE:
-                LOG.verbose("Creating item in " + sqliteTable.getName() + " identified by ID: " + item
+                LOG.info("Creating item in " + sqliteTable.getName() + " identified by ID: " + item
                         .getPrimaryKeyString());
                 sqlCommandProcessor.execute(sqlCommandFactory.insertFor(modelSchema, item));
                 break;
             case UPDATE:
-                LOG.verbose("Updating item in " + sqliteTable.getName() + " identified by ID: " + item
+                LOG.info("Updating item in " + sqliteTable.getName() + " identified by ID: " + item
                         .getPrimaryKeyString());
                 sqlCommandProcessor.execute(sqlCommandFactory.updateFor(modelSchema, item));
                 break;
             case DELETE:
-                LOG.verbose("Deleting item in " + sqliteTable.getName() + " identified by ID: " +
+                LOG.info("Deleting item in " + sqliteTable.getName() + " identified by ID: " +
                         item.getPrimaryKeyString());
                 final SQLiteColumn primaryKey = sqliteTable.getPrimaryKey();
                 if (primaryKey != null) {
@@ -833,18 +835,18 @@ public final class SQLiteStorageAdapter implements LocalStorageAdapter {
     private Completable updateModels() {
         return PersistentModelVersion.fromLocalStorage(this).flatMap(iterator -> {
             if (iterator.hasNext()) {
-                LOG.verbose("Successfully read model version from local storage. " +
+                LOG.info("Successfully read model version from local storage. " +
                     "Checking if the model version need to be updated...");
                 PersistentModelVersion persistentModelVersion = iterator.next();
                 String oldVersion = persistentModelVersion.getVersion();
                 String newVersion = modelsProvider.version();
                 if (!ObjectsCompat.equals(oldVersion, newVersion)) {
-                    LOG.debug("Updating version as it has changed from " + oldVersion + " to " + newVersion);
+                    LOG.info("Updating version as it has changed from " + oldVersion + " to " + newVersion);
                     Objects.requireNonNull(sqliteStorageHelper);
                     Objects.requireNonNull(databaseConnectionHandle);
                     sqliteStorageHelper.update(databaseConnectionHandle, oldVersion, newVersion);
                 } else {
-                    LOG.debug("Database up to date. Checking ModelMetadata.");
+                    LOG.info("Database up to date. Checking ModelMetadata.");
                     new ModelMigrations(databaseConnectionHandle, modelsProvider).apply();
                 }
             }

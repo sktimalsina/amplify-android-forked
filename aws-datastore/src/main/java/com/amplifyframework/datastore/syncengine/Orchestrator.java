@@ -95,7 +95,6 @@ public final class Orchestrator {
         Objects.requireNonNull(appSync);
         Objects.requireNonNull(localStorageAdapter);
 
-        LOG.error("ORCHESTRATOR:START");
 
         this.mutationOutbox = new PersistentMutationOutbox(localStorageAdapter);
         VersionRepository versionRepository = new VersionRepository(localStorageAdapter);
@@ -146,6 +145,7 @@ public final class Orchestrator {
      *      and started (asynchronously) the transition to SYNC_VIA_API, if an API is available.
      */
     public synchronized Completable start() {
+        LOG.info("Orchestrator.start(321)");
         return performSynchronized(() -> {
             switch (targetState.get()) {
                 case LOCAL_ONLY:
@@ -166,12 +166,13 @@ public final class Orchestrator {
      * @return A completable which emits success when orchestrator stops
      */
     public synchronized Completable stop() {
+        LOG.info("Orchestrator.stop()");
         return performSynchronized(this::transitionToStopped);
     }
 
     private Completable performSynchronized(Action action) {
         boolean permitAvailable = startStopSemaphore.availablePermits() > 0;
-        LOG.debug("Attempting to acquire lock. Permits available = " + permitAvailable);
+        LOG.info("Attempting to acquire lock. Permits available = " + permitAvailable);
         try {
             if (!startStopSemaphore.tryAcquire(LOCAL_OP_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
                 return Completable.error(new DataStoreException("Timed out acquiring orchestrator lock.",
@@ -181,11 +182,13 @@ public final class Orchestrator {
             return Completable.error(new DataStoreException("Interrupted while acquiring orchestrator lock.",
                     "Retry your request."));
         }
-        LOG.info("XXXXXXX  Orchestrator lock acquired.");
+
+        LOG.info("111 Orchestrator lock acquired.");
+
         return Completable.fromAction(action)
             .doFinally(() -> {
                 startStopSemaphore.release();
-                LOG.info("YYYYY Orchestrator lock released.");
+                LOG.info("222 Orchestrator lock released.");
             }
         );
     }
@@ -314,11 +317,11 @@ public final class Orchestrator {
                 publishNetworkStatusEvent(true);
 
                 long startTime = System.currentTimeMillis();
-                LOG.debug("About to hydrate...");
+                LOG.info("About to hydrate...");
                 try {
                     syncProcessor.hydrate()
                             .blockingAwait();
-                    LOG.debug("Hydration complete in " + (System.currentTimeMillis() - startTime) + "ms");
+                    LOG.info("Hydration complete in " + (System.currentTimeMillis() - startTime) + "ms");
                 } catch (Throwable failure) {
                     if (!emitter.isDisposed()) {
                         emitter.onError(new DataStoreException(
@@ -332,7 +335,7 @@ public final class Orchestrator {
                     return;
                 }
 
-                LOG.debug("Draining outbox...");
+                LOG.info("Draining outbox...");
                 mutationProcessor.startDrainingMutationOutbox();
 
                 subscriptionProcessor.startDrainingMutationBuffer();
@@ -341,7 +344,7 @@ public final class Orchestrator {
             })
             .doOnError(error -> LOG.error("Failure encountered while attempting to start API sync.", error))
             .doOnComplete(() -> LOG.info("Started the orchestrator in API sync mode."))
-            .doOnDispose(() -> LOG.debug("Orchestrator disposed the API sync"))
+            .doOnDispose(() -> LOG.info("Orchestrator disposed the API sync"))
             .subscribeOn(Schedulers.io())
             .subscribe(
                     this::publishReadyEvent,

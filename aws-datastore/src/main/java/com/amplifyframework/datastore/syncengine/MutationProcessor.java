@@ -88,6 +88,7 @@ final class MutationProcessor {
      * it again later, when network conditions become favorable again.
      */
     void startDrainingMutationOutbox() {
+        LOG.info("MutationProcessor.startDrainingMutationOutbox()");
         ongoingOperationsDisposable.add(mutationOutbox.events()
             .doOnSubscribe(disposable ->
                 LOG.info(
@@ -107,6 +108,7 @@ final class MutationProcessor {
     }
 
     private Completable drainMutationOutbox() {
+        LOG.info("MutationProcessor.drainMutationOutbox()");
         PendingMutation<? extends Model> next;
         do {
             next = mutationOutbox.peek();
@@ -136,6 +138,7 @@ final class MutationProcessor {
      * @return A Completable that emits success when the item is processed, emits failure, otherwise
      */
     private <T extends Model> Completable processOutboxItem(PendingMutation<T> mutationOutboxItem) {
+        LOG.info("MutationProcessor.processOutboxItem(): " + mutationOutboxItem);
         // First, mark the item as in-flight.
         return mutationOutbox.markInFlight(mutationOutboxItem.getMutationId())
             // Then, put it "into flight"
@@ -154,7 +157,7 @@ final class MutationProcessor {
                 )
             )
             .doOnComplete(() -> {
-                LOG.debug(
+                LOG.info(
                     "Pending mutation was published to cloud successfully, " +
                         "and removed from the mutation outbox: " + mutationOutboxItem
                 );
@@ -258,6 +261,7 @@ final class MutationProcessor {
      *         if the publication fails
      */
     private <T extends Model> Single<ModelWithMetadata<T>> publishToNetwork(PendingMutation<T> pendingMutation) {
+        LOG.info("MutationProcessor.publishToNetwork(): " + pendingMutation);
         switch (pendingMutation.getMutationType()) {
             case UPDATE:
                 return update(pendingMutation);
@@ -275,6 +279,7 @@ final class MutationProcessor {
 
     // For an item in the outbox, dispatch an update mutation
     private <T extends Model> Single<ModelWithMetadata<T>> update(PendingMutation<T> mutation) {
+        LOG.info("MutationProcessor.update()");
         final T updatedItem = mutation.getMutatedItem();
         final ModelSchema updatedItemSchema =
             this.schemaRegistry.getModelSchemaForModelClass(updatedItem.getModelName());
@@ -287,6 +292,7 @@ final class MutationProcessor {
 
     // For an item in the outbox, dispatch a create mutation
     private <T extends Model> Single<ModelWithMetadata<T>> create(PendingMutation<T> mutation) {
+        LOG.info("MutationProcessor.update()");
         final T createdItem = mutation.getMutatedItem();
         final ModelSchema createdItemSchema =
             this.schemaRegistry.getModelSchemaForModelClass(createdItem.getModelName());
@@ -296,6 +302,7 @@ final class MutationProcessor {
 
     // For an item in the outbox, dispatch a delete mutation
     private <T extends Model> Single<ModelWithMetadata<T>> delete(PendingMutation<T> mutation) {
+        LOG.info("MutationProcessor.delete()");
         final T deletedItem = mutation.getMutatedItem();
         final ModelSchema deletedItemSchema =
             this.schemaRegistry.getModelSchemaForModelClass(deletedItem.getModelName());

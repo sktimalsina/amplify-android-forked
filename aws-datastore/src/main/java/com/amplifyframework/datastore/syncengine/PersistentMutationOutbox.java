@@ -88,6 +88,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     @NonNull
     @Override
     public <T extends Model> Completable enqueue(@NonNull PendingMutation<T> incomingMutation) {
+        LOG.info("PersistentMutationOutbox.enqueue(): " + incomingMutation);
         Objects.requireNonNull(incomingMutation);
         return Completable.defer(() -> {
             // If there is no existing mutation for the model, then just apply the incoming
@@ -103,6 +104,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
             }
         })
         .doOnSubscribe(disposable -> semaphore.acquire())
+        .doOnError(error -> LOG.error("Error enqueuing mutation: " + incomingMutation))
         .doOnTerminate(semaphore::release);
     }
 
@@ -114,6 +116,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     }
 
     private <T extends Model> Completable save(PendingMutation<T> pendingMutation) {
+        LOG.info("PersistentMutationOutbox.save(): " + pendingMutation);
         PendingMutation.PersistentRecord item = converter.toRecord(pendingMutation);
         return Completable.create(emitter -> storage.save(
                 item,
@@ -138,6 +141,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     @NonNull
     @Override
     public Completable remove(@NonNull TimeBasedUuid pendingMutationId) {
+        LOG.info("PersistantMutationOutbox.remove(): " + pendingMutationId);
         return removeNotLocking(pendingMutationId)
             .doOnSubscribe(disposable -> semaphore.acquire())
             .doOnTerminate(semaphore::release);
@@ -146,6 +150,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     @NonNull
     private Completable removeNotLocking(@NonNull TimeBasedUuid pendingMutationId) {
         Objects.requireNonNull(pendingMutationId);
+        LOG.info("PersistantMutationOutbox.removeNotLocking() " + pendingMutationId);
         return Completable.defer(() -> {
             PendingMutation<? extends Model> pendingMutation = mutationQueue.getMutationById(pendingMutationId);
             if (pendingMutation == null) {
@@ -181,6 +186,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     @NonNull
     @Override
     public Completable load() {
+        LOG.info("PersistentMutationOutbox.load()");
         return Completable.create(emitter -> {
             inFlightMutations.clear();
             mutationQueue.clear();
@@ -203,6 +209,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
             );
         })
         .doOnSubscribe(disposable -> semaphore.acquire())
+        .doOnError(error -> LOG.error("Error in PersistentMutationOutbox.load(): " + error))
         .doOnTerminate(semaphore::release);
     }
 
@@ -225,6 +232,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
     @NonNull
     @Override
     public Completable markInFlight(@NonNull TimeBasedUuid pendingMutationId) {
+        LOG.info("PersistentMutationOutbox.markInFlight(): " + pendingMutationId);
         return Completable.create(emitter -> {
             PendingMutation<? extends Model> mutation = mutationQueue.getMutationById(pendingMutationId);
             if (mutation != null) {
@@ -286,7 +294,7 @@ final class PersistentMutationOutbox implements MutationOutbox {
          * @return A completable with the actions to resolve the conflict.
          */
         Completable resolve() {
-            LOG.debug("IncomingMutationConflict - "
+            LOG.info("IncomingMutationConflict - "
                 + " existing " + existing.getMutationType()
                 + " incoming " + incoming.getMutationType());
             switch (incoming.getMutationType()) {

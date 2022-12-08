@@ -54,8 +54,8 @@ import java.util.List;
  *     {@code
  *     QueryPredicate nameCheck = QueryField.field("name").eq("Jane");
  *     SQLPredicate adapted = new SQLPredicate(nameCheck);
- *     LOG.verbose(adapted.toString()); // Prints "name = ?"
- *     LOG.verbose(adapted.getSelectionArgs()); // Prints "[Jane]"
+ *     LOG.info(adapted.toString()); // Prints "name = ?"
+ *     LOG.info(adapted.getSelectionArgs()); // Prints "[Jane]"
  *     }
  *</pre>
  *

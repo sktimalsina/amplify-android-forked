@@ -110,7 +110,6 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
             () -> api.getPlugins().isEmpty() ? Orchestrator.State.LOCAL_ONLY : Orchestrator.State.SYNC_VIA_API,
                 isSyncRetryEnabled
         );
-
     }
 
     private AWSDataStorePlugin(@NonNull Builder builder) throws DataStoreException {
@@ -255,6 +254,12 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
             event -> InitializationStatus.SUCCEEDED.toString().equals(event.getName()),
             event -> categoryInitializationsPending.countDown()
         );
+
+        // Print all Hub Datastore events
+        Amplify.Hub.subscribe(HubChannel.DATASTORE,
+                event -> LOG.info("HUB Datastore Event: " + event)
+        );
+
     }
 
     @WorkerThread
@@ -296,6 +301,7 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
      */
     @Override
     public void start(@NonNull Action onComplete, @NonNull Consumer<DataStoreException> onError) {
+        LOG.info("Datastore:start()");
         waitForInitialization()
             .andThen(orchestrator.start())
             .subscribeOn(Schedulers.io())
@@ -310,6 +316,7 @@ public final class AWSDataStorePlugin extends DataStorePlugin<Void> {
      */
     @Override
     public void stop(@NonNull Action onComplete, @NonNull Consumer<DataStoreException> onError) {
+        LOG.info("Datastore:stop()");
         waitForInitialization()
             .andThen(orchestrator.stop())
             .subscribeOn(Schedulers.io())

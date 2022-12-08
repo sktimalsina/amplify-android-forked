@@ -47,18 +47,18 @@ public final class AddModelNameToModelMetadataKey implements ModelMigration {
     @Override
     public void apply() {
         if (!needsMigration()) {
-            LOG.debug("No ModelMetadata migration needed.");
+            LOG.info("No ModelMetadata migration needed.");
             return;
         }
         try (Cursor duplicateIds = duplicateIds(modelProvider.modelNames())) {
             database.beginTransaction();
             if (duplicateIds.moveToNext()) {
                 // Truncate the data in ModelMetadata and LastSyncMetadata
-                LOG.debug("There are duplicate IDs. Clearing ModelMetadata to force base sync.");
+                LOG.info("There are duplicate IDs. Clearing ModelMetadata to force base sync.");
                 database.execSQL("DELETE FROM ModelMetadata;", new String[]{});
                 database.execSQL("DELETE FROM LastSyncMetadata;", new String[]{});
             } else {
-                LOG.debug("No duplicate IDs found. Modifying and backfilling ModelMetadata.");
+                LOG.info("No duplicate IDs found. Modifying and backfilling ModelMetadata.");
                 // Create a copy of the the ModelMetadata table with the new itemModelName column.
                 database.execSQL("DROP TABLE IF EXISTS ModelMetadataCopy;",
                                                  new String[]{});
@@ -99,7 +99,7 @@ public final class AddModelNameToModelMetadataKey implements ModelMigration {
         }
         sb.insert(0, "SELECT id, tableName, count(id) as count FROM (");
         sb.append(") GROUP BY id HAVING count > 1");
-        LOG.debug("Check for duplicate IDs:" + sb.toString());
+        LOG.info("Check for duplicate IDs:" + sb.toString());
         return database.rawQuery(sb.toString(), new String[]{});
     }
 
@@ -126,7 +126,7 @@ public final class AddModelNameToModelMetadataKey implements ModelMigration {
                 "mm._version from ModelMetadata mm INNER JOIN (");
         sb.append(") as models on mm.id=models.id;");
         sb.insert(0, "INSERT INTO ModelMetadataCopy(id,_deleted,_lastChangedAt,_version) ");
-        LOG.debug("Backfill query: " + sb.toString());
+        LOG.info("Backfill query: " + sb.toString());
         return sb.toString();
     }
 
