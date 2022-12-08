@@ -111,6 +111,8 @@ ext {
 
         oauth2: 'com.google.auth:google-auth-library-oauth2-http:0.26.0',
         okhttp: 'com.squareup.okhttp3:okhttp:4.9.1',
+        okhttplogging: 'com.squareup.okhttp3:logging-interceptor:4.9.1',
+
         gson: 'com.google.code.gson:gson:2.8.9',
         maplibre: [
             sdk: 'org.maplibre.gl:android-sdk:9.5.2',

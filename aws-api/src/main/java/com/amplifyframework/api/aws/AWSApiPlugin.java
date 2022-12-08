@@ -41,6 +41,7 @@ import com.amplifyframework.core.Action;
 import com.amplifyframework.core.Amplify;
 import com.amplifyframework.core.Consumer;
 import com.amplifyframework.hub.HubChannel;
+import com.amplifyframework.logging.Logger;
 import com.amplifyframework.util.Immutable;
 import com.amplifyframework.util.UserAgent;
 
@@ -62,8 +63,12 @@ import java.util.concurrent.atomic.AtomicReference;
 import okhttp3.Call;
 import okhttp3.Connection;
 import okhttp3.EventListener;
+import okhttp3.Interceptor;
 import okhttp3.OkHttpClient;
 import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.Response;
+import okhttp3.logging.HttpLoggingInterceptor;
 
 /**
  * Plugin implementation to be registered with Amplify API category.
@@ -71,6 +76,7 @@ import okhttp3.Protocol;
  */
 @SuppressWarnings("TypeParameterHidesVisibleType") // <R> shadows >com.amplifyframework.api.aws.R
 public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
+    private static final Logger LOG = Amplify.Logging.forNamespace("amplify:aws-api");
     private final Map<String, ClientDetails> apiDetails;
     private final Map<String, OkHttpConfigurator> apiConfigurators;
     private final GraphQLResponse.Factory gqlResponseFactory;
@@ -138,6 +144,9 @@ public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
             final EndpointType endpointType = apiConfiguration.getEndpointType();
             final OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
             okHttpClientBuilder.addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string));
+            HttpLoggingInterceptor interceptor = new HttpLoggingInterceptor();
+            interceptor.setLevel(HttpLoggingInterceptor.Level.BODY);
+            okHttpClientBuilder.addInterceptor(interceptor);
             okHttpClientBuilder.eventListener(new ApiConnectionEventListener());
 
             OkHttpConfigurator configurator = apiConfigurators.get(apiName);

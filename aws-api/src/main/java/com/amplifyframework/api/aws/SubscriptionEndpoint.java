@@ -566,6 +566,7 @@ final class SubscriptionEndpoint {
         }
 
         private void processJsonMessage(WebSocket webSocket, String message) throws ApiException {
+            LOG.info("SubscriptionEndpoint.processJsonMessage(): message = " + message);
             try {
                 final JSONObject jsonMessage = new JSONObject(message);
                 final SubscriptionMessageType subscriptionMessageType =
