@@ -25,6 +25,7 @@ import com.amplifyframework.core.model.Model;
 import com.amplifyframework.core.model.ModelProvider;
 import com.amplifyframework.core.model.ModelSchema;
 import com.amplifyframework.core.model.SchemaRegistry;
+import com.amplifyframework.core.model.query.predicate.QueryPredicateOperation;
 import com.amplifyframework.core.model.query.predicate.QueryPredicates;
 import com.amplifyframework.core.model.temporal.Temporal;
 import com.amplifyframework.datastore.DataStoreChannelEventName;
@@ -102,6 +103,7 @@ public final class SyncProcessorTest {
     private static final long BASE_SYNC_INTERVAL_MINUTES = TimeUnit.DAYS.toMinutes(1);
     private static final List<String> SYSTEM_MODEL_NAMES =
             ForEach.inCollection(SystemModelsProviderFactory.create().models(), Class::getSimpleName);
+    public static final QueryPredicateOperation<String> BLOGGER_SYNC_EXPRESSION = BlogOwner.NAME.beginsWith("J");
 
     private AppSync appSync;
     private ModelProvider modelProvider;
@@ -152,7 +154,7 @@ public final class SyncProcessorTest {
                 .syncMaxRecords(syncMaxRecords)
                 .syncPageSize(1_000)
                 .errorHandler(dataStoreException -> errorHandlerCallCount++)
-                .syncExpression(BlogOwner.class, () -> BlogOwner.NAME.beginsWith("J"))
+                .syncExpression(BlogOwner.class, () -> BLOGGER_SYNC_EXPRESSION)
                 .syncExpression(Author.class, QueryPredicates::none)
                 .build();
 
@@ -553,6 +555,50 @@ public final class SyncProcessorTest {
             requestCaptor.capture(),
             any(),
             any()
+        );
+        final List<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> capturedValues =
+                requestCaptor.getAllValues();
+        assertEquals(modelClassCount, capturedValues.size());
+        for (GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>> capturedValue : capturedValues) {
+            assertEquals(recentTimeMs, capturedValue.getVariables().get("lastSync"));
+        }
+    }
+
+    /**
+     * When a sync is requested, the last sync sync expression should be compared to the current
+     * sync.  If the sync expression has changed, a base sync should always be performed.
+     * If the sync expression has not changed, as delta sync or base sync should be performed
+     * based on the value of the last sync time.
+     * @throws AmplifyException On failure to build GraphQLRequest for sync query
+     */
+    @Test
+    public void baseSyncRequestedIfLastSyncIsDifferent() throws AmplifyException {
+        // Arrange: add LastSyncMetadata for the types, indicating that they
+        // were sync'd very recently (within the interval.)
+        String item = BLOGGER_SYNC_EXPRESSION.toString();
+        long recentTimeMs = Time.now();
+        Observable.fromIterable(modelProvider.modelNames())
+                .map(modelName -> LastSyncMetadata.syncedAt(modelName, recentTimeMs, BLOGGER_SYNC_EXPRESSION))
+                .blockingForEach(storageAdapter::save);
+
+        // Arrange: return some content from the fake AppSync endpoint
+        AppSyncMocking.sync(appSync)
+                .mockSuccessResponse(BlogOwner.class, BLOGGER_JAMESON);
+
+        // Act: hydrate the store.
+        assertTrue(syncProcessor.hydrate().blockingAwait(OP_TIMEOUT_MS, TimeUnit.MILLISECONDS));
+
+        // Assert: the sync time that was passed to AppSync should have been `null`.
+        //The class count should be one less than total model count because Author model has sync expression =
+        // QueryPredicates.none()
+        int modelClassCount = modelProvider.models().size() - 1;
+        @SuppressWarnings("unchecked") // ignore GraphQLRequest.class not being a parameterized type.
+        ArgumentCaptor<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> requestCaptor =
+                ArgumentCaptor.forClass(GraphQLRequest.class);
+        verify(appSync, times(modelClassCount)).sync(
+                requestCaptor.capture(),
+                any(),
+                any()
         );
         final List<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> capturedValues =
                 requestCaptor.getAllValues();
