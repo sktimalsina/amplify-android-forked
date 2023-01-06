@@ -98,7 +98,7 @@ public final class Orchestrator {
         this.mutationOutbox = new PersistentMutationOutbox(localStorageAdapter);
         VersionRepository versionRepository = new VersionRepository(localStorageAdapter);
         Merger merger = new Merger(mutationOutbox, versionRepository, localStorageAdapter);
-        SyncTimeRegistry syncTimeRegistry = new SyncTimeRegistry(localStorageAdapter);
+        SyncMetaDataRegistry syncTimeRegistry = new SyncMetaDataRegistry(localStorageAdapter);
         ConflictResolver conflictResolver = new ConflictResolver(dataStoreConfigurationProvider, appSync);
         this.queryPredicateProvider = new QueryPredicateProvider(dataStoreConfigurationProvider);
         RetryHandler retryHandler = new RetryHandler();

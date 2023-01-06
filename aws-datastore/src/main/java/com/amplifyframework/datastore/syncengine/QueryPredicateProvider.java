@@ -65,7 +65,8 @@ final class QueryPredicateProvider {
     }
 
     /**
-     * Returns the {@link QueryPredicate} for the given modelName.
+     * Returns the {@link QueryPredicate} for the given modelName. If a query predicate has not been
+     * stored for the given model, return QueryPredicates.all()
      * @param modelName name of the {@link Model}.
      * @return the {@link QueryPredicate} for the given modelName.
      */

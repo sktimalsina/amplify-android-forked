@@ -24,6 +24,7 @@ import com.amplifyframework.core.Consumer;
 import com.amplifyframework.core.model.ModelSchema;
 import com.amplifyframework.core.model.SchemaRegistry;
 import com.amplifyframework.core.model.query.predicate.QueryPredicate;
+import com.amplifyframework.core.model.query.predicate.QueryPredicateOperation;
 import com.amplifyframework.core.model.temporal.Temporal;
 import com.amplifyframework.datastore.DataStoreChannelEventName;
 import com.amplifyframework.datastore.DataStoreConfiguration;
@@ -82,6 +83,8 @@ public final class MutationProcessorTest {
     private AppSync appSync;
     private MutationProcessor mutationProcessor;
     private DataStoreConfigurationProvider configurationProvider;
+    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J =
+            BlogOwner.NAME.beginsWith("J");
 
     /**
      * A {@link MutationProcessor} is being tested. To do so, we arrange mutations into
@@ -209,7 +212,8 @@ public final class MutationProcessorTest {
             new ModelMetadata(model.getModelName() + "|" + model.getPrimaryKeyString(), false, 1,
                     Temporal.Timestamp.now());
         ModelSchema schema = schemaRegistry.getModelSchemaForModelClass(BlogOwner.class);
-        LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(schema.getName(), 1_000L);
+        LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(
+                schema.getName(), 1_000L, BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J);
         synchronousStorageAdapter.save(model, metadata, lastSyncMetadata);
 
         // Enqueue an update in the mutation outbox
@@ -374,7 +378,7 @@ public final class MutationProcessorTest {
 
         ModelSchema schema = schemaRegistry.getModelSchemaForModelClass(BlogOwner.class);
         LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(schema.getName(),
-                1_000L);
+                1_000L, BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J);
         synchronousStorageAdapter.save(model, metadata, lastSyncMetadata);
 
         // Enqueue an update in the mutation outbox

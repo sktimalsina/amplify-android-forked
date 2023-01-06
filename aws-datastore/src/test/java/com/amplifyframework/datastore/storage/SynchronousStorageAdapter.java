@@ -100,6 +100,7 @@ public final class SynchronousStorageAdapter {
      */
     public <T extends Model> void save(@NonNull T model, @NonNull QueryPredicate predicate)
         throws DataStoreException {
+        System.out.println("save: " + model + ", " + predicate);
         Await.result(
             operationTimeoutMs,
             (Consumer<StorageItemChange<T>> onResult, Consumer<DataStoreException> onError) ->

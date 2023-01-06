@@ -33,21 +33,33 @@ import java.util.List;
 import io.reactivex.rxjava3.core.Completable;
 import io.reactivex.rxjava3.core.Single;
 
-final class SyncTimeRegistry {
+final class SyncMetaDataRegistry {
+
+    static class SyncMetaData {
+        public SyncMetaData(SyncTime syncTime, String syncPredicate) {
+            this.syncTime = syncTime;
+            this.syncPredicate = syncPredicate;
+        }
+
+        public SyncTime syncTime;
+        public String syncPredicate;
+    }
+
     private final LocalStorageAdapter localStorageAdapter;
 
-    SyncTimeRegistry(LocalStorageAdapter localStorageAdapter) {
+    SyncMetaDataRegistry(LocalStorageAdapter localStorageAdapter) {
         this.localStorageAdapter = localStorageAdapter;
     }
 
-    Single<SyncTime> lookupLastSyncTime(@NonNull String modelClassName) {
+    Single<SyncMetaData> lookupLastSyncInfo(@NonNull String modelClassName) {
+        System.out.println("look up last sync info: " + modelClassName);
         return Single.create(emitter -> {
             QueryPredicate hasMatchingModelClassName = QueryField.field("modelClassName").eq(modelClassName);
 
             localStorageAdapter.query(LastSyncMetadata.class, Where.matches(hasMatchingModelClassName), results -> {
                 try {
                     LastSyncMetadata syncMetadata = extractSingleResult(modelClassName, results);
-                    emitter.onSuccess(SyncTime.from(syncMetadata.getLastSyncTime()));
+                    emitter.onSuccess(new SyncMetaData(SyncTime.from(syncMetadata.getLastSyncTime()), syncMetadata.getLastSyncPredicateString()));
                 } catch (DataStoreException queryResultFailure) {
                     emitter.onError(queryResultFailure);
                 }
@@ -55,9 +67,10 @@ final class SyncTimeRegistry {
         });
     }
 
-    Completable saveLastDeltaSyncTime(@NonNull String modelClassName, @Nullable SyncTime syncTime) {
+    Completable saveLastDeltaSyncTime(@NonNull String modelClassName, @Nullable SyncTime syncTime,
+            @NonNull QueryPredicate syncPredicate) {
         LastSyncMetadata metadata = syncTime != null && syncTime.exists() ?
-            LastSyncMetadata.deltaSyncedAt(modelClassName, syncTime.toLong()) :
+            LastSyncMetadata.deltaSyncedAt(modelClassName, syncTime.toLong(), syncPredicate) :
             LastSyncMetadata.neverSynced(modelClassName);
 
         return Completable.create(emitter ->
@@ -71,9 +84,10 @@ final class SyncTimeRegistry {
         );
     }
 
-    Completable saveLastBaseSyncTime(@NonNull String modelClassName, @Nullable SyncTime syncTime) {
+    Completable saveLastBaseSyncTime(@NonNull String modelClassName, @Nullable SyncTime syncTime,
+                                     @NonNull QueryPredicate syncPredicate) {
         LastSyncMetadata metadata = syncTime != null && syncTime.exists() ?
-            LastSyncMetadata.baseSyncedAt(modelClassName, syncTime.toLong()) :
+            LastSyncMetadata.baseSyncedAt(modelClassName, syncTime.toLong(), syncPredicate) :
             LastSyncMetadata.neverSynced(modelClassName);
 
         return Completable.create(emitter ->

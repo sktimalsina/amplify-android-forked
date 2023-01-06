@@ -68,7 +68,7 @@ final class SyncProcessor {
 
     private final ModelProvider modelProvider;
     private final SchemaRegistry schemaRegistry;
-    private final SyncTimeRegistry syncTimeRegistry;
+    private final SyncMetaDataRegistry syncTimeRegistry;
     private final AppSync appSync;
     private final Merger merger;
     private final DataStoreConfigurationProvider dataStoreConfigurationProvider;
@@ -114,8 +114,9 @@ final class SyncProcessor {
         for (ModelSchema schema : modelSchemas) {
             //Check to see if query predicate for this schema is not equal to none. This means customer does
             // not want to sync the data for this model.
-            if (!QueryPredicates.none().equals(queryPredicateProvider.getPredicate(schema.getName()))) {
-                hydrationTasks.add(createHydrationTask(schema));
+            QueryPredicate syncPredicate = queryPredicateProvider.getPredicate(schema.getName());
+            if (!QueryPredicates.none().equals(syncPredicate)) {
+                hydrationTasks.add(createHydrationTask(schema, syncPredicate));
                 toBeSyncedModelArray.add(schema.getName());
             }
         }
@@ -138,10 +139,10 @@ final class SyncProcessor {
             });
     }
 
-    private Completable createHydrationTask(ModelSchema schema) {
+    private Completable createHydrationTask(ModelSchema schema, QueryPredicate newSyncPredicate) {
         ModelSyncMetricsAccumulator metricsAccumulator = new ModelSyncMetricsAccumulator(schema.getName());
-        return syncTimeRegistry.lookupLastSyncTime(schema.getName())
-            .map(this::filterOutOldSyncTimes)
+        return syncTimeRegistry.lookupLastSyncInfo(schema.getName())
+            .map(lastSyncData -> filterOutOldSyncTimes(lastSyncData, newSyncPredicate.toString()))
             // And for each, perform a sync. The network response will contain an Iterable<ModelWithMetadata<T>>
             .flatMap(lastSyncTime -> {
                 // Sync all the pages
@@ -155,8 +156,8 @@ final class SyncProcessor {
             })
             .flatMapCompletable(syncType -> {
                 Completable syncTimeSaveCompletable = SyncType.DELTA.equals(syncType) ?
-                    syncTimeRegistry.saveLastDeltaSyncTime(schema.getName(), SyncTime.now()) :
-                    syncTimeRegistry.saveLastBaseSyncTime(schema.getName(), SyncTime.now());
+                    syncTimeRegistry.saveLastDeltaSyncTime(schema.getName(), SyncTime.now(), newSyncPredicate) :
+                    syncTimeRegistry.saveLastBaseSyncTime(schema.getName(), SyncTime.now(), newSyncPredicate);
                 return syncTimeSaveCompletable.andThen(Completable.fromAction(() ->
                     Amplify.Hub.publish(
                         HubChannel.DATASTORE, metricsAccumulator.toModelSyncedEvent(syncType).toHubEvent()
@@ -179,12 +180,27 @@ final class SyncProcessor {
 
     /**
      * If a sync time is older than (now) - (the base sync interval), regard the provided sync time
-     * as "too old", and return {@link SyncTime#never()}, instead. In all other cases,
-     * just return the provided value.
-     * @param lastSyncTime The time of a last successful sync.
+     * as "too old", and return {@link SyncTime#never()}, to force a base sync.
+     * If the previous sync predicate does not match the new sync predicate, return
+     * {@link SyncTime#never()} to force base sync.
+     * If there is no previous sync time, return {@link SyncTime#never()}, to force a base sync.
+     * In all other cases, return the provided value to cause a delta sync since the given time.
+     * @param syncMetaData The time of a last successful sync and the predicate of that sync.
+     * @param newSyncPredicate The new sync predicate expression.
      * @return The input, or {@link SyncTime#never()}, if the last sync time is "too old."
      */
-    private SyncTime filterOutOldSyncTimes(SyncTime lastSyncTime) throws DataStoreException {
+    private SyncTime filterOutOldSyncTimes(
+            SyncMetaDataRegistry.SyncMetaData syncMetaData, String newSyncPredicate) throws DataStoreException {
+        SyncTime lastSyncTime = syncMetaData.syncTime;
+        String lastSyncPredicate = syncMetaData.syncPredicate;
+
+        System.out.println("last sync predicate: " + lastSyncPredicate + " new sync predicate: " + newSyncPredicate);
+
+        if (!lastSyncPredicate.equals(newSyncPredicate)) {
+            return SyncTime.never();
+        }
+
+
         if (!lastSyncTime.exists()) {
             return SyncTime.never();
         }
@@ -313,7 +329,7 @@ final class SyncProcessor {
             QueryPredicateProviderStep, RetryHandlerStep, SyncRetryStep, BuildStep {
         private ModelProvider modelProvider;
         private SchemaRegistry schemaRegistry;
-        private SyncTimeRegistry syncTimeRegistry;
+        private SyncMetaDataRegistry syncTimeRegistry;
         private AppSync appSync;
         private Merger merger;
         private DataStoreConfigurationProvider dataStoreConfigurationProvider;
@@ -337,7 +353,7 @@ final class SyncProcessor {
 
         @NonNull
         @Override
-        public AppSyncStep syncTimeRegistry(@NonNull SyncTimeRegistry syncTimeRegistry) {
+        public AppSyncStep syncTimeRegistry(@NonNull SyncMetaDataRegistry syncTimeRegistry) {
             this.syncTimeRegistry = Objects.requireNonNull(syncTimeRegistry);
             return Builder.this;
         }
@@ -404,7 +420,7 @@ final class SyncProcessor {
 
     interface SyncTimeRegistryStep {
         @NonNull
-        AppSyncStep syncTimeRegistry(@NonNull SyncTimeRegistry syncTimeRegistry);
+        AppSyncStep syncTimeRegistry(@NonNull SyncMetaDataRegistry syncTimeRegistry);
     }
 
     interface AppSyncStep {

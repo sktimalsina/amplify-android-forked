@@ -103,7 +103,10 @@ public final class SyncProcessorTest {
     private static final long BASE_SYNC_INTERVAL_MINUTES = TimeUnit.DAYS.toMinutes(1);
     private static final List<String> SYSTEM_MODEL_NAMES =
             ForEach.inCollection(SystemModelsProviderFactory.create().models(), Class::getSimpleName);
-    public static final QueryPredicateOperation<String> BLOGGER_SYNC_EXPRESSION = BlogOwner.NAME.beginsWith("J");
+    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J =
+            BlogOwner.NAME.beginsWith("J");
+    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_M =
+            BlogOwner.NAME.beginsWith("M");
 
     private AppSync appSync;
     private ModelProvider modelProvider;
@@ -143,7 +146,7 @@ public final class SyncProcessorTest {
         InMemoryStorageAdapter inMemoryStorageAdapter = InMemoryStorageAdapter.create();
         this.storageAdapter = SynchronousStorageAdapter.delegatingTo(inMemoryStorageAdapter);
 
-        final SyncTimeRegistry syncTimeRegistry = new SyncTimeRegistry(inMemoryStorageAdapter);
+        final SyncMetaDataRegistry syncMetaDataRegistry = new SyncMetaDataRegistry(inMemoryStorageAdapter);
         final MutationOutbox mutationOutbox = new PersistentMutationOutbox(inMemoryStorageAdapter);
         final VersionRepository versionRepository = new VersionRepository(inMemoryStorageAdapter);
         final Merger merger = new Merger(mutationOutbox, versionRepository, inMemoryStorageAdapter);
@@ -154,7 +157,7 @@ public final class SyncProcessorTest {
                 .syncMaxRecords(syncMaxRecords)
                 .syncPageSize(1_000)
                 .errorHandler(dataStoreException -> errorHandlerCallCount++)
-                .syncExpression(BlogOwner.class, () -> BLOGGER_SYNC_EXPRESSION)
+                .syncExpression(BlogOwner.class, () -> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J)
                 .syncExpression(Author.class, QueryPredicates::none)
                 .build();
 
@@ -164,7 +167,7 @@ public final class SyncProcessorTest {
         this.syncProcessor = SyncProcessor.builder()
             .modelProvider(modelProvider)
             .schemaRegistry(schemaRegistry)
-            .syncTimeRegistry(syncTimeRegistry)
+            .syncTimeRegistry(syncMetaDataRegistry)
             .appSync(appSync)
             .merger(merger)
             .dataStoreConfigurationProvider(dataStoreConfigurationProvider)
@@ -491,7 +494,9 @@ public final class SyncProcessorTest {
         // were sync'd too long ago. That is, longer ago than the base sync interval.
         long longAgoTimeMs = Time.now() - (TimeUnit.MINUTES.toMillis(BASE_SYNC_INTERVAL_MINUTES) * 2);
         Observable.fromIterable(modelProvider.modelNames())
-            .map(modelName -> LastSyncMetadata.baseSyncedAt(modelName, longAgoTimeMs))
+            .map(modelName -> LastSyncMetadata.baseSyncedAt(
+                    modelName, longAgoTimeMs,
+                    modelName.equals("BlogOwner") ? BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J : QueryPredicates.all()))
             .blockingForEach(storageAdapter::save);
 
         // Arrange: return some content from the fake AppSync endpoint
@@ -501,9 +506,6 @@ public final class SyncProcessorTest {
         // Act: hydrate the store.
         assertTrue(syncProcessor.hydrate().blockingAwait(OP_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
-        // Assert: the sync time that was passed to AppSync should have been `null`.
-        //The class count should be one less than total model count because Author model has sync expression =
-        // QueryPredicates.none()
         int modelClassCount = modelProvider.models().size() - 1;
         @SuppressWarnings("unchecked") // ignore GraphQLRequest.class not being a parameterized type.
         ArgumentCaptor<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> requestCaptor =
@@ -515,7 +517,10 @@ public final class SyncProcessorTest {
         );
         List<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> capturedValues =
                 requestCaptor.getAllValues();
+        // Assert: The class count should be one less than total model count because Author model
+        // has sync expression = QueryPredicates.none()
         assertEquals(modelClassCount, capturedValues.size());
+        // Assert: the sync time that was passed to AppSync should have be `null` to indicate base sync.
         for (GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>> capturedValue : capturedValues) {
             assertNull(capturedValue.getVariables().get("lastSync"));
         }
@@ -526,6 +531,7 @@ public final class SyncProcessorTest {
      * If the last sync time is after (nowMs - baseSyncIntervalMs) - that is,
      * if the last sync time is within the base sync interval, then a DELTA sync
      * will be performed.
+     * In this test we assume the sync predicate has not changed since last sync.
      * @throws AmplifyException On failure to build GraphQLRequest for sync query
      */
     @Test
@@ -534,7 +540,9 @@ public final class SyncProcessorTest {
         // were sync'd very recently (within the interval.)
         long recentTimeMs = Time.now();
         Observable.fromIterable(modelProvider.modelNames())
-            .map(modelName -> LastSyncMetadata.deltaSyncedAt(modelName, recentTimeMs))
+            .map(modelName -> LastSyncMetadata.deltaSyncedAt(
+                    modelName, recentTimeMs,
+                    modelName.equals("BlogOwner") ? BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J : QueryPredicates.all()))
             .blockingForEach(storageAdapter::save);
 
         // Arrange: return some content from the fake AppSync endpoint
@@ -544,9 +552,6 @@ public final class SyncProcessorTest {
         // Act: hydrate the store.
         assertTrue(syncProcessor.hydrate().blockingAwait(OP_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
-        // Assert: the sync time that was passed to AppSync should have been `null`.
-        //The class count should be one less than total model count because Author model has sync expression =
-        // QueryPredicates.none()
         int modelClassCount = modelProvider.models().size() - 1;
         @SuppressWarnings("unchecked") // ignore GraphQLRequest.class not being a parameterized type.
         ArgumentCaptor<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> requestCaptor =
@@ -558,7 +563,11 @@ public final class SyncProcessorTest {
         );
         final List<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> capturedValues =
                 requestCaptor.getAllValues();
+        // Assert: The class count should be one less than total model count because Author model has sync expression =
+        // QueryPredicates.none()
         assertEquals(modelClassCount, capturedValues.size());
+        // Assert: the sync time that was passed to AppSync should be equal to `recentTimeMs` because
+        // the timeout period has not been passed.
         for (GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>> capturedValue : capturedValues) {
             assertEquals(recentTimeMs, capturedValue.getVariables().get("lastSync"));
         }
@@ -575,11 +584,15 @@ public final class SyncProcessorTest {
     public void baseSyncRequestedIfLastSyncIsDifferent() throws AmplifyException {
         // Arrange: add LastSyncMetadata for the types, indicating that they
         // were sync'd very recently (within the interval.)
-        String item = BLOGGER_SYNC_EXPRESSION.toString();
         long recentTimeMs = Time.now();
         Observable.fromIterable(modelProvider.modelNames())
-                .map(modelName -> LastSyncMetadata.syncedAt(modelName, recentTimeMs, BLOGGER_SYNC_EXPRESSION))
-                .blockingForEach(storageAdapter::save);
+                .map(modelName -> LastSyncMetadata.syncedAt(
+                        modelName, recentTimeMs,
+                        modelName.equals("BlogOwner") ? BLOGGER_SYNC_PREDICATE_BEGINS_WITH_M : QueryPredicates.all()))
+                .doOnNext(it -> System.out.println("last sync data: " + it))
+                .blockingForEach(model -> storageAdapter.save(
+                        model,
+                        model.getLastSyncPredicate()));
 
         // Arrange: return some content from the fake AppSync endpoint
         AppSyncMocking.sync(appSync)
@@ -588,9 +601,6 @@ public final class SyncProcessorTest {
         // Act: hydrate the store.
         assertTrue(syncProcessor.hydrate().blockingAwait(OP_TIMEOUT_MS, TimeUnit.MILLISECONDS));
 
-        // Assert: the sync time that was passed to AppSync should have been `null`.
-        //The class count should be one less than total model count because Author model has sync expression =
-        // QueryPredicates.none()
         int modelClassCount = modelProvider.models().size() - 1;
         @SuppressWarnings("unchecked") // ignore GraphQLRequest.class not being a parameterized type.
         ArgumentCaptor<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> requestCaptor =
@@ -602,9 +612,22 @@ public final class SyncProcessorTest {
         );
         final List<GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>>> capturedValues =
                 requestCaptor.getAllValues();
+        // The class count should be one less than total model count because Author model has sync expression =
+        // QueryPredicates.none()
         assertEquals(modelClassCount, capturedValues.size());
+        // Assert: the sync time that was passed to AppSync should be `null` because the
+        // sync expression has changed from the last sync expression.
         for (GraphQLRequest<PaginatedResult<ModelWithMetadata<BlogOwner>>> capturedValue : capturedValues) {
-            assertEquals(recentTimeMs, capturedValue.getVariables().get("lastSync"));
+//            capturedValue.getVariables()
+//            System.out.println(capturedValue.modelSchema.name);
+            String content = capturedValue.getContent();
+            System.out.println(content);
+            System.out.println(capturedValue.getVariables().get("lastSync"));
+            if (capturedValue.getContent().contains("query SyncBlogOwners(")) {
+                assertNull(capturedValue.getVariables().get("lastSync"));
+            } else {
+                assertEquals(recentTimeMs, capturedValue.getVariables().get("lastSync"));
+            }
         }
     }
 

@@ -16,6 +16,7 @@
 package com.amplifyframework.datastore.storage.sqlite;
 
 import com.amplifyframework.core.Consumer;
+import com.amplifyframework.core.model.query.predicate.QueryPredicateOperation;
 import com.amplifyframework.datastore.DataStoreConfiguration;
 import com.amplifyframework.datastore.DataStoreException;
 import com.amplifyframework.datastore.syncengine.LastSyncMetadata;
@@ -38,12 +39,16 @@ import static org.mockito.Mockito.when;
  */
 public class SyncStatusTest {
 
+    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J =
+            BlogOwner.NAME.beginsWith("J");
+
     /***
      * Get returns sync status.
      */
     @Test
     public void syncStatusGetReturnSyncedStatus() {
-        final LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(BlogOwner.class.getName(), Time.now());
+        final LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(
+                BlogOwner.class.getName(), Time.now(), BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J);
         List<LastSyncMetadata> resultList = new ArrayList<>();
         resultList.add(lastSyncMetadata);
         Consumer<DataStoreException> onObservationError = value -> { };
@@ -63,7 +68,8 @@ public class SyncStatusTest {
      */
     @Test
     public void syncStatusGetReturnNotSyncedStatus() {
-        final LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(BlogOwner.class.getName(), Time.now());
+        final LastSyncMetadata lastSyncMetadata = LastSyncMetadata.baseSyncedAt(
+                BlogOwner.class.getName(), Time.now(), BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J);
         List<LastSyncMetadata> resultList = new ArrayList<>();
         resultList.add(lastSyncMetadata);
         Consumer<DataStoreException> onObservationError = value -> { };

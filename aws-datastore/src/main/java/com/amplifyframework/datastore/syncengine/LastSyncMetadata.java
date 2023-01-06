@@ -17,6 +17,7 @@ package com.amplifyframework.datastore.syncengine;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.VisibleForTesting;
 import androidx.core.util.ObjectsCompat;
 
 import com.amplifyframework.core.model.Model;
@@ -32,7 +33,7 @@ import java.util.UUID;
  * This metadata is persisted locally as a system model. This metadata is inspected
  * whenever the Sync Engine starts up. The system consider the value of
  * {@link LastSyncMetadata#getLastSyncTime()} and the value of
- * {@link LastSyncMetadata#getLastSyncExpression()} to decide whether or not it should
+ * {@link LastSyncMetadata#getLastSyncPredicateString()} to decide whether or not it should
  * perform a "Base Sync" or a "Delta Sync".
  */
 @ModelConfig(type = Model.Type.SYSTEM)
@@ -41,16 +42,19 @@ public final class LastSyncMetadata implements Model {
     private final @ModelField(targetType = "String", isRequired = true) String modelClassName;
     private final @ModelField(targetType = "AWSTimestamp", isRequired = true) Long lastSyncTime;
     private final @ModelField(targetType = "String", isRequired = true) String lastSyncType;
-    private final @ModelField(targetType = "String", isRequired = true) String lastSyncExpression;
+    // Empty string indicates there is no last sync expression stored
+    private final @ModelField(targetType = "String", isRequired = true) String lastSyncPredicateString;
+    private final QueryPredicate lastSyncPredicate;
 
     @SuppressWarnings("checkstyle:ParameterName") // The field is named "id" in the model; keep it consistent
     private LastSyncMetadata(String id, String modelClassName, Long lastSyncTime, SyncType syncType,
-                             QueryPredicate lastSyncExpression) {
+                             QueryPredicate lastSyncPredicate) {
         this.id = id;
         this.modelClassName = modelClassName;
         this.lastSyncTime = lastSyncTime;
         this.lastSyncType = syncType.name();
-        this.lastSyncExpression = lastSyncExpression.toString();
+        this.lastSyncPredicate = lastSyncPredicate;
+        this.lastSyncPredicateString = lastSyncPredicate == null ? "" : lastSyncPredicate.toString();
     }
 
     /**
@@ -62,9 +66,10 @@ public final class LastSyncMetadata implements Model {
      * @return {@link LastSyncMetadata} for the model class
      */
     public static <T extends Model> LastSyncMetadata baseSyncedAt(@NonNull String modelClassName,
-                                                           @Nullable long lastSyncTime) {
+                                                           @Nullable long lastSyncTime,
+                                                           @NonNull QueryPredicate syncPredicate) {
         Objects.requireNonNull(modelClassName);
-        return create(modelClassName, lastSyncTime, SyncType.BASE, null);
+        return create(modelClassName, lastSyncTime, SyncType.BASE, syncPredicate);
     }
 
     /**
@@ -75,9 +80,10 @@ public final class LastSyncMetadata implements Model {
      * @return {@link LastSyncMetadata} for the model class
      */
     static <T extends Model> LastSyncMetadata deltaSyncedAt(@NonNull String modelClassName,
-                                                            @Nullable long lastSyncTime) {
+                                                            @Nullable long lastSyncTime,
+                                                            @NonNull QueryPredicate syncPredicate) {
         Objects.requireNonNull(modelClassName);
-        return create(modelClassName, lastSyncTime, SyncType.DELTA, null);
+        return create(modelClassName, lastSyncTime, SyncType.DELTA, syncPredicate);
     }
 
     /**
@@ -118,10 +124,10 @@ public final class LastSyncMetadata implements Model {
     @SuppressWarnings("WeakerAccess")
     static <T extends Model> LastSyncMetadata create(
             @NonNull String modelClassName, @Nullable Long lastSyncTime, @NonNull SyncType syncType,
-            QueryPredicate lastSyncExpression) {
+            QueryPredicate syncPredicate) {
         Objects.requireNonNull(modelClassName);
         return new LastSyncMetadata(hash(modelClassName), modelClassName, lastSyncTime, syncType,
-                lastSyncExpression);
+                syncPredicate);
     }
 
     @NonNull
@@ -161,10 +167,10 @@ public final class LastSyncMetadata implements Model {
     /**
      * Gets the last expression with which the model of name {@link #getModelClassName()}
      * was sync'd.
-     * @return Last sync time for model
+     * @return String representation of last sync expression
      */
-    public String getLastSyncExpression() {
-        return this.lastSyncExpression;
+    public String getLastSyncPredicateString() {
+        return this.lastSyncPredicateString;
     }
 
     /**
@@ -173,6 +179,11 @@ public final class LastSyncMetadata implements Model {
      */
     public String getLastSyncType() {
         return lastSyncType;
+    }
+
+    @VisibleForTesting
+    public QueryPredicate getLastSyncPredicate() {
+        return lastSyncPredicate;
     }
 
     /**
@@ -206,7 +217,7 @@ public final class LastSyncMetadata implements Model {
         if (!ObjectsCompat.equals(lastSyncType, that.lastSyncType)) {
             return false;
         }
-        if (!ObjectsCompat.equals(lastSyncExpression, that.lastSyncExpression)) {
+        if (!ObjectsCompat.equals(lastSyncPredicateString, that.lastSyncPredicateString)) {
             return false;
         }
         return ObjectsCompat.equals(lastSyncTime, that.lastSyncTime);
@@ -218,7 +229,7 @@ public final class LastSyncMetadata implements Model {
         result = 31 * result + modelClassName.hashCode();
         result = 31 * result + lastSyncTime.hashCode();
         result = 31 * result + lastSyncType.hashCode();
-        result = 31 * result + lastSyncExpression.hashCode();
+        result = 31 * result + lastSyncPredicateString.hashCode();
         return result;
     }
 
@@ -229,7 +240,7 @@ public final class LastSyncMetadata implements Model {
             ", modelClassName='" + modelClassName + '\'' +
             ", lastSyncTime=" + lastSyncTime +
             ", lastSyncType=" + lastSyncType +
-            ", lastSyncExpression=" + lastSyncExpression +
+            ", lastSyncExpression=" + lastSyncPredicateString +
             '}';
     }
 }
