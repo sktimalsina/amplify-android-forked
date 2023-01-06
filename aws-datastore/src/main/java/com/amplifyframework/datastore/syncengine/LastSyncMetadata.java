@@ -62,12 +62,12 @@ public final class LastSyncMetadata implements Model {
      * model has been base sync'd, and that the last sync occurred at the given time.
      * @param modelClassName Name of model
      * @param lastSyncTime Last time it was synced
-     * @param <T> t type of Model.
+     * @param syncPredicate The query predicate used for this sync.
      * @return {@link LastSyncMetadata} for the model class
      */
     public static <T extends Model> LastSyncMetadata baseSyncedAt(@NonNull String modelClassName,
-                                                           @Nullable long lastSyncTime,
-                                                           @NonNull QueryPredicate syncPredicate) {
+                                                                  @Nullable long lastSyncTime,
+                                                                  @NonNull QueryPredicate syncPredicate) {
         Objects.requireNonNull(modelClassName);
         return create(modelClassName, lastSyncTime, SyncType.BASE, syncPredicate);
     }
@@ -181,6 +181,10 @@ public final class LastSyncMetadata implements Model {
         return lastSyncType;
     }
 
+    /**
+     * Returns the last sync predicate of this type.
+     * @return lastSyncPredicate.
+     */
     @VisibleForTesting
     public QueryPredicate getLastSyncPredicate() {
         return lastSyncPredicate;

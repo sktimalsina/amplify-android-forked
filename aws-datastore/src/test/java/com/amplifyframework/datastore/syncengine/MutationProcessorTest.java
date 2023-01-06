@@ -76,6 +76,8 @@ import static org.mockito.Mockito.when;
 @RunWith(RobolectricTestRunner.class)
 public final class MutationProcessorTest {
     private static final long TIMEOUT_SECONDS = 5;
+    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J =
+            BlogOwner.NAME.beginsWith("J");
 
     private SchemaRegistry schemaRegistry;
     private SynchronousStorageAdapter synchronousStorageAdapter;
@@ -83,8 +85,6 @@ public final class MutationProcessorTest {
     private AppSync appSync;
     private MutationProcessor mutationProcessor;
     private DataStoreConfigurationProvider configurationProvider;
-    private static final QueryPredicateOperation<String> BLOGGER_SYNC_PREDICATE_BEGINS_WITH_J =
-            BlogOwner.NAME.beginsWith("J");
 
     /**
      * A {@link MutationProcessor} is being tested. To do so, we arrange mutations into

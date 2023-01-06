@@ -35,16 +35,6 @@ import io.reactivex.rxjava3.core.Single;
 
 final class SyncMetaDataRegistry {
 
-    static class SyncMetaData {
-        public SyncMetaData(SyncTime syncTime, String syncPredicate) {
-            this.syncTime = syncTime;
-            this.syncPredicate = syncPredicate;
-        }
-
-        public SyncTime syncTime;
-        public String syncPredicate;
-    }
-
     private final LocalStorageAdapter localStorageAdapter;
 
     SyncMetaDataRegistry(LocalStorageAdapter localStorageAdapter) {
@@ -52,14 +42,14 @@ final class SyncMetaDataRegistry {
     }
 
     Single<SyncMetaData> lookupLastSyncInfo(@NonNull String modelClassName) {
-        System.out.println("look up last sync info: " + modelClassName);
         return Single.create(emitter -> {
             QueryPredicate hasMatchingModelClassName = QueryField.field("modelClassName").eq(modelClassName);
 
             localStorageAdapter.query(LastSyncMetadata.class, Where.matches(hasMatchingModelClassName), results -> {
                 try {
                     LastSyncMetadata syncMetadata = extractSingleResult(modelClassName, results);
-                    emitter.onSuccess(new SyncMetaData(SyncTime.from(syncMetadata.getLastSyncTime()), syncMetadata.getLastSyncPredicateString()));
+                    emitter.onSuccess(new SyncMetaData(
+                            SyncTime.from(syncMetadata.getLastSyncTime()), syncMetadata.getLastSyncPredicateString()));
                 } catch (DataStoreException queryResultFailure) {
                     emitter.onError(queryResultFailure);
                 }
@@ -116,6 +106,24 @@ final class SyncMetaDataRegistry {
             return lastSyncMetadata.get(0);
         } else {
             return LastSyncMetadata.neverSynced(modelClassName);
+        }
+    }
+
+    static class SyncMetaData {
+        private SyncTime syncTime;
+        private String syncPredicate;
+
+        SyncMetaData(SyncTime syncTime, String syncPredicate) {
+            this.syncTime = syncTime;
+            this.syncPredicate = syncPredicate;
+        }
+
+        public SyncTime getSyncTime() {
+            return syncTime;
+        }
+
+        public String getSyncPredicate() {
+            return syncPredicate;
         }
     }
 }

@@ -191,15 +191,14 @@ final class SyncProcessor {
      */
     private SyncTime filterOutOldSyncTimes(
             SyncMetaDataRegistry.SyncMetaData syncMetaData, String newSyncPredicate) throws DataStoreException {
-        SyncTime lastSyncTime = syncMetaData.syncTime;
-        String lastSyncPredicate = syncMetaData.syncPredicate;
+        SyncTime lastSyncTime = syncMetaData.getSyncTime();
+        String lastSyncPredicate = syncMetaData.getSyncPredicate();
 
         System.out.println("last sync predicate: " + lastSyncPredicate + " new sync predicate: " + newSyncPredicate);
 
         if (!lastSyncPredicate.equals(newSyncPredicate)) {
             return SyncTime.never();
         }
-
 
         if (!lastSyncTime.exists()) {
             return SyncTime.never();
