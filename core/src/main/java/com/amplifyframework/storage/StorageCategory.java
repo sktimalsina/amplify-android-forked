@@ -22,6 +22,7 @@ import com.amplifyframework.core.category.Category;
 import com.amplifyframework.core.category.CategoryType;
 import com.amplifyframework.storage.operation.StorageDownloadFileOperation;
 import com.amplifyframework.storage.operation.StorageGetUrlOperation;
+import com.amplifyframework.storage.operation.StorageListAsyncOperation;
 import com.amplifyframework.storage.operation.StorageListOperation;
 import com.amplifyframework.storage.operation.StorageRemoveOperation;
 import com.amplifyframework.storage.operation.StorageTransferOperation;
@@ -234,6 +235,12 @@ public final class StorageCategory extends Category<StoragePlugin<?>> implements
             @NonNull Consumer<StorageException> onError
     ) {
         return getSelectedPlugin().list(path, options, onSuccess, onError);
+    }
+
+    @NonNull
+    @Override
+    public StorageListAsyncOperation<?, ?, ?> list(@NonNull String path, @NonNull StorageListOptions options) {
+        return getSelectedPlugin().list(path, options);
     }
 }
 

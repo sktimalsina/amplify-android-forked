@@ -20,6 +20,7 @@ import androidx.annotation.NonNull;
 import com.amplifyframework.core.Consumer;
 import com.amplifyframework.storage.operation.StorageDownloadFileOperation;
 import com.amplifyframework.storage.operation.StorageGetUrlOperation;
+import com.amplifyframework.storage.operation.StorageListAsyncOperation;
 import com.amplifyframework.storage.operation.StorageListOperation;
 import com.amplifyframework.storage.operation.StorageRemoveOperation;
 import com.amplifyframework.storage.operation.StorageTransferOperation;
@@ -341,5 +342,18 @@ public interface StorageCategoryBehavior {
             @NonNull StorageListOptions options,
             @NonNull Consumer<StorageListResult> onSuccess,
             @NonNull Consumer<StorageException> onError);
+
+    /**
+     * List the object identifiers under the hierarchy specified
+     * by the path, relative to access level, from storage.
+     * Register consumers to observe progress.
+     * @param path The path in storage to list items from
+     * @param options parameters specific to plugin behavior
+     * @return an operation object to fetch the result asynchronously
+     */
+    @NonNull
+    StorageListAsyncOperation<?, ?, ?> list(
+        @NonNull String path,
+        @NonNull StorageListOptions options);
 }
 

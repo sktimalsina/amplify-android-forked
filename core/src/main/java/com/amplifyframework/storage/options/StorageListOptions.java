@@ -24,6 +24,7 @@ import androidx.core.util.ObjectsCompat;
  */
 public class StorageListOptions extends StorageOptions {
 
+    private int maxKey;
     /**
      * Constructs a StorageListOptions instance with the
      * attributes from builder instance.
@@ -31,6 +32,11 @@ public class StorageListOptions extends StorageOptions {
      */
     protected StorageListOptions(final Builder<?> builder) {
         super(builder.getAccessLevel(), builder.getTargetIdentityId());
+        maxKey = builder.maxKeys;
+    }
+
+    public final int getMaxKeys() {
+        return maxKey;
     }
 
     /**
@@ -115,6 +121,7 @@ public class StorageListOptions extends StorageOptions {
      * @param <B> the type of builder to chain with
      */
     public static class Builder<B extends Builder<B>> extends StorageOptions.Builder<B, StorageListOptions> {
+        public int maxKeys = 1000;
         /**
          * Returns an instance of StorageListOptions with the parameters
          * specified by this builder.
@@ -125,6 +132,11 @@ public class StorageListOptions extends StorageOptions {
         @NonNull
         public StorageListOptions build() {
             return new StorageListOptions(this);
+        }
+
+        public Builder<B> setMaxKeys(int maxKeys) {
+            this.maxKeys = maxKeys;
+            return this;
         }
     }
 }

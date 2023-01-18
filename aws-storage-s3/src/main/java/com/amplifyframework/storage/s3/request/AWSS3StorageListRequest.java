@@ -27,6 +27,7 @@ public final class AWSS3StorageListRequest {
     private final String path;
     private final StorageAccessLevel accessLevel;
     private final String targetIdentityId;
+    private final int maxKeys;
 
     /**
      * Constructs a new AWSS3StorageListRequest.
@@ -37,15 +38,18 @@ public final class AWSS3StorageListRequest {
      * @param accessLevel Storage access level
      * @param targetIdentityId If set, this should override the current user's identity ID.
      *                         If null, the operation will fetch the current identity ID.
+     * @param maxKeys maxKeys to be returned
      */
     public AWSS3StorageListRequest(
             @NonNull String path,
             @NonNull StorageAccessLevel accessLevel,
-            @Nullable String targetIdentityId
+            @Nullable String targetIdentityId,
+            int maxKeys
     ) {
         this.path = path;
         this.accessLevel = accessLevel;
         this.targetIdentityId = targetIdentityId;
+        this.maxKeys = maxKeys;
     }
 
     /**
@@ -73,6 +77,14 @@ public final class AWSS3StorageListRequest {
     @Nullable
     public String getTargetIdentityId() {
         return targetIdentityId;
+    }
+
+    /**
+     * Get max keys to be returned
+     * @return max keys value
+    */
+    public int getMaxKeys() {
+        return maxKeys;
     }
 }
 

@@ -18,7 +18,9 @@ package com.amplifyframework.storage.s3.service
 import android.content.Context
 import aws.sdk.kotlin.services.s3.S3Client
 import aws.sdk.kotlin.services.s3.deleteObject
+import aws.sdk.kotlin.services.s3.listObjectsV2
 import aws.sdk.kotlin.services.s3.model.GetObjectRequest
+import aws.sdk.kotlin.services.s3.model.ListObjectsV2Response
 import aws.sdk.kotlin.services.s3.paginators.listObjectsV2Paginated
 import aws.sdk.kotlin.services.s3.presigners.presign
 import com.amplifyframework.auth.AuthCredentialsProvider
@@ -149,6 +151,18 @@ internal class AWSS3StorageService(
             }
         }
         return items
+    }
+
+    override fun listFiles(path: String, prefix: String, maxKeys: Int, nextToken: String?): ListObjectsV2Response {
+        val items = mutableListOf<StorageItem>()
+        return runBlocking {
+            s3Client.listObjectsV2 {
+                this.bucket = s3BucketName
+                this.prefix = path
+                this.maxKeys = maxKeys
+                continuationToken = nextToken
+            }
+        }
     }
 
     /**

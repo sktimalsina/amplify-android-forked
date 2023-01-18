@@ -18,10 +18,14 @@ package com.amplifyframework.storage.s3.service;
 import android.content.Context;
 import androidx.annotation.NonNull;
 
+import aws.sdk.kotlin.services.s3.model.ListObjectsV2Response;
+
 import com.amplifyframework.storage.ObjectMetadata;
 import com.amplifyframework.storage.StorageItem;
 import com.amplifyframework.storage.s3.transfer.TransferObserver;
 import com.amplifyframework.storage.s3.transfer.TransferRecord;
+
+import androidx.annotation.Nullable;
 
 import java.io.File;
 import java.io.IOException;
@@ -99,6 +103,20 @@ public interface StorageService {
      * @return A list of parsed items present inside given path
      */
     List<StorageItem> listFiles(@NonNull String path, @NonNull String prefix);
+
+    /**
+     * Returns a list of items from provided path inside the storage.
+     *
+     * @param path path inside storage to inspect for list of items
+     * @param prefix path appended to S3 keys
+     * @param nextToken token to fetch next page
+     * @param maxKeys keys to be returned per request
+     * @return A list of parsed items present inside given path
+     */
+    ListObjectsV2Response listFiles(@NonNull String path,
+                                    @NonNull String prefix,
+                                    int maxKeys,
+                                    @Nullable String nextToken);
 
     /**
      * Delete an object with specific key inside the storage.

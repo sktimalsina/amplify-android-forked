@@ -28,6 +28,7 @@ import com.amplifyframework.storage.StoragePlugin;
 import com.amplifyframework.storage.TransferState;
 import com.amplifyframework.storage.operation.StorageDownloadFileOperation;
 import com.amplifyframework.storage.operation.StorageGetUrlOperation;
+import com.amplifyframework.storage.operation.StorageListAsyncOperation;
 import com.amplifyframework.storage.operation.StorageListOperation;
 import com.amplifyframework.storage.operation.StorageRemoveOperation;
 import com.amplifyframework.storage.operation.StorageTransferOperation;
@@ -51,6 +52,7 @@ import com.amplifyframework.storage.s3.configuration.AWSS3StoragePluginConfigura
 import com.amplifyframework.storage.s3.credentials.CognitoCredentialsProvider;
 import com.amplifyframework.storage.s3.operation.AWSS3StorageDownloadFileOperation;
 import com.amplifyframework.storage.s3.operation.AWSS3StorageGetPresignedUrlOperation;
+import com.amplifyframework.storage.s3.operation.AWSS3StorageListAsyncOperation;
 import com.amplifyframework.storage.s3.operation.AWSS3StorageListOperation;
 import com.amplifyframework.storage.s3.operation.AWSS3StorageRemoveOperation;
 import com.amplifyframework.storage.s3.operation.AWSS3StorageUploadFileOperation;
@@ -599,7 +601,8 @@ public final class AWSS3StoragePlugin extends StoragePlugin<S3Client> {
             options.getAccessLevel() != null
                 ? options.getAccessLevel()
                 : defaultAccessLevel,
-            options.getTargetIdentityId()
+            options.getTargetIdentityId(),
+            options.getMaxKeys()
         );
 
         AWSS3StorageListOperation operation =
@@ -615,6 +618,30 @@ public final class AWSS3StoragePlugin extends StoragePlugin<S3Client> {
         operation.start();
 
         return operation;
+    }
+
+    @NonNull
+    @Override
+    public StorageListAsyncOperation<AWSS3StorageListRequest, StorageListResult, StorageException> list(
+        @NonNull String path,
+        @NonNull StorageListOptions options) {
+
+        AWSS3StorageListRequest request = new AWSS3StorageListRequest(
+            path,
+            options.getAccessLevel() != null
+                ? options.getAccessLevel()
+                : defaultAccessLevel,
+            options.getTargetIdentityId(),
+            options.getMaxKeys()
+        );
+
+        return new AWSS3StorageListAsyncOperation<AWSS3StorageListRequest, StorageListResult, StorageException>(
+            request,
+            storageService,
+            executorService,
+            authCredentialsProvider,
+            awsS3StoragePluginConfiguration
+        );
     }
 
     /**
