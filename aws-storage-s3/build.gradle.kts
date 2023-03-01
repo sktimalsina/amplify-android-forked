@@ -42,6 +42,8 @@ dependencies {
     testImplementation(testDependency.androidx.test.workmanager)
     testImplementation(testDependency.kotlin.test.coroutines)
     testImplementation(project(":aws-storage-s3"))
+    implementation("org.slf4j:slf4j-api:2.0.1")
+    implementation("org.slf4j:slf4j-simple:2.0.1")
 
     androidTestImplementation(project(":testutils"))
     androidTestImplementation(project(":aws-auth-cognito"))

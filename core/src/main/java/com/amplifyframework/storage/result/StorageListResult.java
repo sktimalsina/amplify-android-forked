@@ -29,9 +29,15 @@ import java.util.List;
  */
 public final class StorageListResult {
     private final List<StorageItem> items;
+    private final String nextContinuationToken;
 
-    private StorageListResult(List<StorageItem> items) {
+    public String getNextContinuationToken() {
+        return nextContinuationToken;
+    }
+
+    private StorageListResult(List<StorageItem> items, String nextContinuationToken) {
         this.items = items;
+        this.nextContinuationToken = nextContinuationToken;
     }
 
     /**
@@ -45,7 +51,7 @@ public final class StorageListResult {
         if (items != null) {
             safeItems.addAll(items);
         }
-        return new StorageListResult(Collections.unmodifiableList(safeItems));
+        return new StorageListResult(Collections.unmodifiableList(safeItems), null);
     }
 
     /**

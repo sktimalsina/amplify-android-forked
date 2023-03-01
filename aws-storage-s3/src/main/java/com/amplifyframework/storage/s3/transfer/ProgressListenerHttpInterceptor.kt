@@ -60,6 +60,12 @@ internal open class ProgressListenerInterceptor(
         override val contentLength: Long?
             get() = sourceContent.contentLength
 
+        override val isDuplex: Boolean
+            get() = sourceContent.isDuplex
+
+        override val isOneShot: Boolean
+            get() = sourceContent.isOneShot
+
         override fun readFrom(): SdkSource {
             return object : SdkSource {
                 override fun close() {
@@ -82,8 +88,16 @@ internal open class ProgressListenerInterceptor(
         private val progressListener: ProgressListener
     ) : HttpBody.ChannelContent() {
         val delegate = httpBody.readFrom()
+
         override val contentLength: Long?
             get() = httpBody.contentLength
+
+        override val isDuplex: Boolean
+            get() = httpBody.isDuplex
+
+        override val isOneShot: Boolean
+            get() = httpBody.isOneShot
+
         override fun readFrom(): SdkByteReadChannel {
             return object : SdkByteReadChannel by delegate {
                 override val availableForRead: Int
@@ -129,6 +143,7 @@ internal class UploadProgressListenerInterceptor(
         context: ProtocolRequestInterceptorContext<Any, HttpRequest>
     ): HttpRequest {
         val builder = context.protocolRequest.toBuilder()
+
         builder.body = convertBodyWithProgressUpdates(builder.body)
         return builder.build()
     }

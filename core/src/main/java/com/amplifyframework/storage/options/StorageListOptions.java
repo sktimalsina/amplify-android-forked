@@ -23,6 +23,25 @@ import androidx.core.util.ObjectsCompat;
  * Options to specify attributes of list API invocation.
  */
 public class StorageListOptions extends StorageOptions {
+    private int pageSize;
+    private String nextContinuationToken;
+
+    public int getPageSize() {
+        return pageSize;
+    }
+
+    public String getNextContinuationToken() {
+        return nextContinuationToken;
+    }
+
+    enum PageSize {
+        ALL(-1);
+        private final int pageSize;
+        PageSize(int i) {
+            pageSize = i;
+        }
+    }
+
 
     /**
      * Constructs a StorageListOptions instance with the
@@ -115,6 +134,8 @@ public class StorageListOptions extends StorageOptions {
      * @param <B> the type of builder to chain with
      */
     public static class Builder<B extends Builder<B>> extends StorageOptions.Builder<B, StorageListOptions> {
+        private String nextConitnuationToken;
+        private int pageSize;
         /**
          * Returns an instance of StorageListOptions with the parameters
          * specified by this builder.

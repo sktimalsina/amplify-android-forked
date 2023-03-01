@@ -151,9 +151,12 @@ public final class AWSS3StorageUploadTest {
      */
     @Test
     public void testUploadLargeFile() throws Exception {
+        System.setProperty("org.slf4j.simpleLogger.defaultLogLevel", "trace");
         File uploadFile = new RandomTempFile(LARGE_FILE_SIZE);
         String fileName = uploadFile.getName();
-        synchronousStorage.uploadFile(fileName, uploadFile, options, EXTENDED_TIMEOUT_MS);
+        AWSS3StorageUploadFileOptions awss3StorageUploadFileOptions =
+            AWSS3StorageUploadFileOptions.builder().setUseAccelerateEndpoint(true).build();
+        synchronousStorage.uploadFile(fileName, uploadFile, awss3StorageUploadFileOptions, EXTENDED_TIMEOUT_MS);
     }
 
     /**
