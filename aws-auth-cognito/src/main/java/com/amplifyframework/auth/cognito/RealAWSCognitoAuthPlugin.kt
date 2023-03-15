@@ -571,6 +571,15 @@ internal class RealAWSCognitoAuthPlugin(
         )
     }
 
+    override fun setupTotp(
+        username: String?,
+        session: String?,
+        onSuccess: Consumer<AuthSignInResult>,
+        onError: Consumer<AuthException>
+    ) {
+        TODO("Not yet implemented")
+    }
+
     override fun confirmSignIn(
         challengeResponse: String,
         onSuccess: Consumer<AuthSignInResult>,

@@ -152,6 +152,13 @@ internal class KotlinAuthFacadeInternal(private val delegate: RealAWSCognitoAuth
         }
     }
 
+    suspend fun setupTotp(
+        username: String?,
+        session: String?
+    ): AuthSignInResult {
+        TODO()
+    }
+
     suspend fun confirmSignIn(
         challengeResponse: String
     ): AuthSignInResult {

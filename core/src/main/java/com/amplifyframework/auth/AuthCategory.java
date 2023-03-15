@@ -122,6 +122,12 @@ public final class AuthCategory extends Category<AuthPlugin<?>> implements AuthC
     }
 
     @Override
+    public void setupTotp(@Nullable String username, @Nullable String session,
+                          @NonNull Consumer<AuthSignInResult> onSuccess, @NonNull Consumer<AuthException> onError) {
+        getSelectedPlugin().setupTotp(username, session, onSuccess, onError);
+    }
+
+    @Override
     public void signIn(
             @Nullable String username,
             @Nullable String password,
@@ -387,7 +393,7 @@ public final class AuthCategory extends Category<AuthPlugin<?>> implements AuthC
     ) {
         getSelectedPlugin().signOut(options, onComplete);
     }
-    
+
     @Override
     public void deleteUser(
             @NonNull Action onSuccess,

@@ -29,7 +29,7 @@ import org.json.JSONObject
  */
 internal const val AWS_PINPOINT_ANALYTICS_LOG_NAMESPACE = "amplify:aws-pinpoint-analytics:%s"
 
-class AWSPinpointAnalyticsPlugin : AnalyticsPlugin<Any>() {
+class AWSPinpointAnalyticsPlugin : AnalyticsPlugin<PinpointClient>() {
 
     private val pluginKey = "awsPinpointAnalyticsPlugin"
     private val analyticsConfigKey = "pinpointAnalytics"

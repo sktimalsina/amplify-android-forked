@@ -271,6 +271,24 @@ class AWSCognitoAuthPlugin : AuthPlugin<AWSCognitoAuthService>() {
         )
     }
 
+    override fun setupTotp(
+        username: String?,
+        session: String?,
+        onSuccess: Consumer<AuthSignInResult>,
+        onError: Consumer<AuthException>
+    ) {
+        queueChannel.trySend(
+            pluginScope.launch(start = CoroutineStart.LAZY) {
+                try {
+                    val result = queueFacade.setupTotp(username, session)
+                    onSuccess.accept(result)
+                } catch (e: Exception) {
+                    onError.accept(e.toAuthException())
+                }
+            }
+        )
+    }
+
     override fun confirmSignIn(
         challengeResponse: String,
         onSuccess: Consumer<AuthSignInResult>,

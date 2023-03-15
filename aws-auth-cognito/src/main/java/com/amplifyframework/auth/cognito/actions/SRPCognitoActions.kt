@@ -15,6 +15,7 @@
 
 package com.amplifyframework.auth.cognito.actions
 
+import aws.sdk.kotlin.services.cognitoidentityprovider.associateSoftwareToken
 import aws.sdk.kotlin.services.cognitoidentityprovider.initiateAuth
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.AuthFlowType
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.ChallengeNameType
@@ -197,6 +198,16 @@ internal object SRPCognitoActions : SRPActions {
                     encodedContextData?.let { userContextData { encodedData = it } }
                 }
                 if (response != null) {
+                    response.challengeName?.let { it ->
+                        if (it == ChallengeNameType.MfaSetup) {
+                            val associateTotp = cognitoAuthService.cognitoIdentityProviderClient?.associateSoftwareToken {
+                                session = response.session
+                            }
+                            associateTotp?.let { res ->
+                                this.logger.info("Secret is ${res.secretCode}")
+                            }
+                        }
+                    }
                     SignInChallengeHelper.evaluateNextStep(
                         username,
                         response.challengeName,

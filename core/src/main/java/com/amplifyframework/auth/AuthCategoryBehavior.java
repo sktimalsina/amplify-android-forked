@@ -137,6 +137,12 @@ public interface AuthCategoryBehavior {
             @NonNull Consumer<AuthSignInResult> onSuccess,
             @NonNull Consumer<AuthException> onError);
 
+    void setupTotp(
+        @Nullable String username,
+        @Nullable String session,
+        @NonNull Consumer<AuthSignInResult> onSuccess,
+        @NonNull Consumer<AuthException> onError);
+
     /**
      * Basic authentication to the app with a username and password.
      * @param username A login identifier e.g. `superdog22`; or an email/phone number, depending on configuration

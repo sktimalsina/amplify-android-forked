@@ -27,7 +27,7 @@ public enum AuthSignInStep {
      * with the code sent via SMS text message to proceed with the sign in flow.
      */
     CONFIRM_SIGN_IN_WITH_SMS_MFA_CODE,
-    
+
     /**
      * Custom multifactor authentication is enabled on this account and requires you to call
      * {@link com.amplifyframework.auth.AuthCategoryBehavior#confirmSignIn(String, Consumer, Consumer)}
@@ -57,6 +57,8 @@ public enum AuthSignInStep {
      * to confirm the user's account and then attempt sign in again.
      */
     CONFIRM_SIGN_UP,
+
+    MFA_SETUP,
 
     /**
      * No further steps are needed in the sign in flow.
