@@ -15,7 +15,6 @@
 
 package com.amplifyframework.auth.cognito.actions
 
-import aws.sdk.kotlin.services.cognitoidentityprovider.associateSoftwareToken
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.ChallengeNameType
 import aws.sdk.kotlin.services.cognitoidentityprovider.respondToAuthChallenge
 import com.amplifyframework.auth.cognito.AuthEnvironment
@@ -67,18 +66,7 @@ internal object SignInChallengeCognitoActions : SignInChallengeActions {
                 pinpointEndpointId?.let { analyticsMetadata { analyticsEndpointId = it } }
                 encodedContextData?.let { this.userContextData { encodedData = it } }
             }
-
-
             response?.let {
-                response.challengeName?.let { type ->
-                    if (type == ChallengeNameType.MfaSetup) {
-                        val associateSoftwareResponse = cognitoAuthService.cognitoIdentityProviderClient?.{}.associateSoftwareToken {
-                            session = response.session
-                        }
-                        logger.debug("associateSoftwareResponse is ${associateSoftwareResponse?.secretCode}")
-                    }
-                }
-
                 SignInChallengeHelper.evaluateNextStep(
                     username = username ?: "",
                     challengeNameType = response.challengeName,

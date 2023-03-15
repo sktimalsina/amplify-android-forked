@@ -17,6 +17,8 @@ package com.amplifyframework.auth.cognito
 
 import aws.sdk.kotlin.services.cognitoidentity.CognitoIdentityClient
 import aws.sdk.kotlin.services.cognitoidentityprovider.CognitoIdentityProviderClient
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.smithy.kotlin.runtime.auth.awscredentials.CredentialsProvider
 import aws.smithy.kotlin.runtime.client.endpoints.Endpoint
 import aws.smithy.kotlin.runtime.client.endpoints.EndpointProvider
 import aws.smithy.kotlin.runtime.client.SdkLogMode
@@ -36,6 +38,11 @@ interface AWSCognitoAuthService {
                         EndpointProvider { Endpoint(endpoint) }
                     }
                     this.sdkLogMode = SdkLogMode.LogResponseWithBody
+                    /*this.credentialsProvider = object: CredentialsProvider {
+                        override suspend fun getCredentials(): Credentials {
+                            return Credentials(accessKeyId = "ACCESS_KEY_ID", secretAccessKey = "SECRET_ACCESS_KEY", sessionToken = "SESSION_TOKEN")
+                        }
+                    }*/
                 }
             }
 

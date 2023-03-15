@@ -20,6 +20,9 @@ import aws.sdk.kotlin.services.cognitoidentityprovider.initiateAuth
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.AuthFlowType
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.ChallengeNameType
 import aws.sdk.kotlin.services.cognitoidentityprovider.respondToAuthChallenge
+import aws.sdk.kotlin.services.cognitoidentityprovider.withConfig
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.smithy.kotlin.runtime.auth.awscredentials.CredentialsProvider
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.auth.cognito.AuthEnvironment
 import com.amplifyframework.auth.cognito.helpers.AuthHelper
@@ -200,7 +203,14 @@ internal object SRPCognitoActions : SRPActions {
                 if (response != null) {
                     response.challengeName?.let { it ->
                         if (it == ChallengeNameType.MfaSetup) {
-                            val associateTotp = cognitoAuthService.cognitoIdentityProviderClient?.associateSoftwareToken {
+                            val associateTotp = cognitoAuthService.cognitoIdentityProviderClient?.withConfig {
+                                this.credentialsProvider = object: CredentialsProvider {
+                                    override suspend fun getCredentials(): Credentials {
+                                        logger.debug("getCredentials called")
+                                        return Credentials(accessKeyId = "ACCESS_KEY_ID", secretAccessKey = "SECRET_ACCESS_KEY", sessionToken = "SESSION_TOKEN")
+                                    }
+                                }
+                            }?.associateSoftwareToken {
                                 session = response.session
                             }
                             associateTotp?.let { res ->
