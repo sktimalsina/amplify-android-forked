@@ -127,6 +127,7 @@ import com.amplifyframework.statemachine.codegen.events.AuthenticationEvent
 import com.amplifyframework.statemachine.codegen.events.AuthorizationEvent
 import com.amplifyframework.statemachine.codegen.events.DeleteUserEvent
 import com.amplifyframework.statemachine.codegen.events.HostedUIEvent
+import com.amplifyframework.statemachine.codegen.events.SetupSoftwareTokenEvent
 import com.amplifyframework.statemachine.codegen.events.SignInChallengeEvent
 import com.amplifyframework.statemachine.codegen.events.SignOutEvent
 import com.amplifyframework.statemachine.codegen.states.AuthState
@@ -136,7 +137,9 @@ import com.amplifyframework.statemachine.codegen.states.DeleteUserState
 import com.amplifyframework.statemachine.codegen.states.HostedUISignInState
 import com.amplifyframework.statemachine.codegen.states.SRPSignInState
 import com.amplifyframework.statemachine.codegen.states.SignInChallengeState
+import com.amplifyframework.statemachine.codegen.states.SignInSetupSoftwareTokenState
 import com.amplifyframework.statemachine.codegen.states.SignInState
+import com.amplifyframework.statemachine.codegen.states.SignInState.ResolvingSoftwareTokenSetup
 import com.amplifyframework.statemachine.codegen.states.SignOutState
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
@@ -518,6 +521,8 @@ internal class RealAWSCognitoAuthPlugin(
                         val signInState = authNState.signInState
                         val srpSignInState = (signInState as? SignInState.SigningInWithSRP)?.srpSignInState
                         val challengeState = (signInState as? SignInState.ResolvingChallenge)?.challengeState
+                        val associateSoftwareTokenState =
+                            (signInState as? ResolvingSoftwareTokenSetup)?.signInSetupSoftwareTokenState
                         when {
                             srpSignInState is SRPSignInState.Error -> {
                                 authStateMachine.cancel(token)
@@ -535,10 +540,25 @@ internal class RealAWSCognitoAuthPlugin(
                                 authStateMachine.cancel(token)
                                 SignInChallengeHelper.getNextStep(challengeState.challenge, onSuccess, onError)
                             }
+                            associateSoftwareTokenState is SignInSetupSoftwareTokenState.WaitingForAnswer -> {
+                                authStateMachine.cancel(token)
+                                val challengeParams = mapOf(
+                                    "SECRET_CODE" to associateSoftwareTokenState.associateSoftwareTokenData.secretCode
+                                )
+                                val authSignInResult = AuthSignInResult(
+                                    false,
+                                    AuthNextSignInStep(
+                                        AuthSignInStep.SETUP_TOTP_WITH_SECRET_CODE,
+                                        challengeParams,
+                                        null
+                                    )
+                                )
+                                onSuccess.accept(authSignInResult)
+                            }
                         }
                     }
                     authNState is AuthenticationState.SignedIn &&
-                        authZState is AuthorizationState.SessionEstablished -> {
+                            authZState is AuthorizationState.SessionEstablished -> {
                         authStateMachine.cancel(token)
                         val authSignInResult = AuthSignInResult(
                             true,
@@ -596,23 +616,29 @@ internal class RealAWSCognitoAuthPlugin(
     ) {
         authStateMachine.getCurrentState { authState ->
             val authNState = authState.authNState
-            val signInState = (authNState as? AuthenticationState.SigningIn)?.signInState
-            if (signInState is SignInState.ResolvingChallenge) {
-                when (signInState.challengeState) {
-                    is SignInChallengeState.WaitingForAnswer -> {
-                        _confirmSignIn(challengeResponse, options, onSuccess, onError)
-                    }
-                    else -> {
-                        onError.accept(InvalidStateException())
+            when (val signInState = (authNState as? AuthenticationState.SigningIn)?.signInState) {
+                is SignInState.ResolvingChallenge -> {
+                    when (signInState.challengeState) {
+                        is SignInChallengeState.WaitingForAnswer -> {
+                            _confirmSignIn(signInState, challengeResponse, options, onSuccess, onError)
+                        }
+                        else -> {
+                            onError.accept(InvalidStateException())
+                        }
                     }
                 }
-            } else {
-                onError.accept(InvalidStateException())
+                is SignInState.ResolvingSoftwareTokenSetup -> {
+                    _confirmSignIn(signInState, challengeResponse, options, onSuccess, onError)
+                }
+                else -> {
+                    onError.accept(InvalidStateException())
+                }
             }
         }
     }
 
     private fun _confirmSignIn(
+        signInState: SignInState,
         challengeResponse: String,
         options: AuthConfirmSignInOptions,
         onSuccess: Consumer<AuthSignInResult>,
@@ -627,7 +653,7 @@ internal class RealAWSCognitoAuthPlugin(
                 val signInState = (authNState as? AuthenticationState.SigningIn)?.signInState
                 when {
                     authNState is AuthenticationState.SignedIn &&
-                        authZState is AuthorizationState.SessionEstablished -> {
+                            authZState is AuthorizationState.SessionEstablished -> {
                         authStateMachine.cancel(token)
                         val authSignInResult = AuthSignInResult(
                             true,
@@ -645,28 +671,54 @@ internal class RealAWSCognitoAuthPlugin(
                         )
                     }
                     signInState is SignInState.ResolvingChallenge &&
-                        signInState.challengeState is SignInChallengeState.Error -> {
+                            signInState.challengeState is SignInChallengeState.Error -> {
                         authStateMachine.cancel(token)
                         onError.accept(
                             CognitoAuthExceptionConverter.lookup(
                                 (
-                                    signInState.challengeState as SignInChallengeState.Error
-                                    ).exception,
+                                        signInState.challengeState as SignInChallengeState.Error
+                                        ).exception,
                                 "Confirm Sign in failed."
                             )
                         )
                     }
+                    signInState is SignInState.ResolvingSoftwareTokenSetup &&
+                            signInState.signInSetupSoftwareTokenState is SignInSetupSoftwareTokenState.Error -> {
+
+                    }
                 }
             }, {
-            val awsCognitoConfirmSignInOptions = options as? AWSCognitoAuthConfirmSignInOptions
-            val event = SignInChallengeEvent(
-                SignInChallengeEvent.EventType.VerifyChallengeAnswer(
-                    challengeResponse,
-                    awsCognitoConfirmSignInOptions?.metadata ?: mapOf()
-                )
-            )
-            authStateMachine.send(event)
-        }
+
+                when (signInState) {
+                    is SignInState.ResolvingChallenge -> {
+                        val awsCognitoConfirmSignInOptions = options as? AWSCognitoAuthConfirmSignInOptions
+                        val event = SignInChallengeEvent(
+                            SignInChallengeEvent.EventType.VerifyChallengeAnswer(
+                                challengeResponse,
+                                awsCognitoConfirmSignInOptions?.metadata ?: mapOf()
+                            )
+                        )
+                        authStateMachine.send(event)
+                    }
+                    is SignInState.ResolvingSoftwareTokenSetup -> {
+                        when (signInState.signInSetupSoftwareTokenState) {
+                            is SignInSetupSoftwareTokenState.WaitingForAnswer -> {
+                                val event = SetupSoftwareTokenEvent(
+                                    SetupSoftwareTokenEvent.EventType.VerifyChallengeAnswer(
+                                        challengeResponse
+                                    )
+                                )
+                                authStateMachine.send(event)
+                            }
+                            else -> {
+                                onError.accept(InvalidStateException())
+                            }
+                        }
+                    }
+                    else -> onError.accept(InvalidStateException())
+                }
+
+            }
         )
     }
 
@@ -810,7 +862,7 @@ internal class RealAWSCognitoAuthPlugin(
                         }
                     }
                     authNState is AuthenticationState.SignedIn &&
-                        authZState is AuthorizationState.SessionEstablished -> {
+                            authZState is AuthorizationState.SessionEstablished -> {
                         authStateMachine.cancel(token)
                         val authSignInResult =
                             AuthSignInResult(
@@ -901,7 +953,7 @@ internal class RealAWSCognitoAuthPlugin(
                 else -> {
                     logger.warn(
                         "Received handleWebUIResponse but ignoring because the user is not currently signing in " +
-                            "or signing out"
+                                "or signing out"
                     )
                     Unit
                 }
@@ -1655,7 +1707,7 @@ internal class RealAWSCognitoAuthPlugin(
                         AWSCognitoAuthSignOutResult.FailedSignOut(
                             InvalidStateException(
                                 "The user is currently federated to identity pool. " +
-                                    "You must call clearFederationToIdentityPool to clear credentials."
+                                        "You must call clearFederationToIdentityPool to clear credentials."
                             )
                         )
                     )
@@ -1753,7 +1805,7 @@ internal class RealAWSCognitoAuthPlugin(
                     val exception = deleteUserException
                     when {
                         authZState is AuthorizationState.DeletingUser &&
-                            authZState.deleteUserState is DeleteUserState.Error -> {
+                                authZState.deleteUserState is DeleteUserState.Error -> {
                             deleteUserException = authZState.deleteUserState.exception
                         }
                         authNState is AuthenticationState.SignedOut && authZState is AuthorizationState.Configured -> {
@@ -1824,15 +1876,15 @@ internal class RealAWSCognitoAuthPlugin(
                     InvalidStateException("Federation could not be completed.")
                 )
                 (
-                    authNState is AuthenticationState.SignedOut ||
-                        authNState is AuthenticationState.Error ||
-                        authNState is AuthenticationState.NotConfigured ||
-                        authNState is AuthenticationState.FederatedToIdentityPool
-                    ) && (
-                    authZState is AuthorizationState.Configured ||
-                        authZState is AuthorizationState.SessionEstablished ||
-                        authZState is AuthorizationState.Error
-                    ) -> {
+                        authNState is AuthenticationState.SignedOut ||
+                                authNState is AuthenticationState.Error ||
+                                authNState is AuthenticationState.NotConfigured ||
+                                authNState is AuthenticationState.FederatedToIdentityPool
+                        ) && (
+                        authZState is AuthorizationState.Configured ||
+                                authZState is AuthorizationState.SessionEstablished ||
+                                authZState is AuthorizationState.Error
+                        ) -> {
 
                     val existingCredential = when (authZState) {
                         is AuthorizationState.SessionEstablished -> authZState.amplifyCredential
@@ -1872,7 +1924,7 @@ internal class RealAWSCognitoAuthPlugin(
                 val authZState = authState.authZState
                 when {
                     authNState is AuthenticationState.FederatedToIdentityPool &&
-                        authZState is AuthorizationState.SessionEstablished -> {
+                            authZState is AuthorizationState.SessionEstablished -> {
                         authStateMachine.cancel(token)
                         val credential = authZState.amplifyCredential as? AmplifyCredential.IdentityPoolFederated
                         val identityId = credential?.identityId
@@ -1923,14 +1975,14 @@ internal class RealAWSCognitoAuthPlugin(
             val authZState = authState.authZState
             when {
                 authState is AuthState.Configured &&
-                    (
-                        authNState is AuthenticationState.FederatedToIdentityPool &&
-                            authZState is AuthorizationState.SessionEstablished
-                        ) || (
-                    authZState is AuthorizationState.Error &&
-                        authZState.exception is SessionError &&
-                        authZState.exception.amplifyCredential is AmplifyCredential.IdentityPoolFederated
-                    ) -> {
+                        (
+                                authNState is AuthenticationState.FederatedToIdentityPool &&
+                                        authZState is AuthorizationState.SessionEstablished
+                                ) || (
+                        authZState is AuthorizationState.Error &&
+                                authZState.exception is SessionError &&
+                                authZState.exception.amplifyCredential is AmplifyCredential.IdentityPoolFederated
+                        ) -> {
                     val event = AuthenticationEvent(AuthenticationEvent.EventType.ClearFederationToIdentityPool())
                     authStateMachine.send(event)
                     _clearFederationToIdentityPool(onSuccess, onError)

@@ -32,6 +32,7 @@ import com.amplifyframework.statemachine.codegen.events.CustomSignInEvent
 import com.amplifyframework.statemachine.codegen.events.DeviceSRPSignInEvent
 import com.amplifyframework.statemachine.codegen.events.HostedUIEvent
 import com.amplifyframework.statemachine.codegen.events.SRPEvent
+import com.amplifyframework.statemachine.codegen.events.SetupSoftwareTokenEvent
 import com.amplifyframework.statemachine.codegen.events.SignInChallengeEvent
 import com.amplifyframework.statemachine.codegen.events.SignInEvent
 
@@ -85,7 +86,11 @@ internal object SignInCognitoActions : SignInActions {
     override fun initResolveChallenge(event: SignInEvent.EventType.ReceivedChallenge) =
         Action<AuthEnvironment>("InitResolveChallenge") { id, dispatcher ->
             logger.verbose("$id Starting execution")
-            val evt = SignInChallengeEvent(SignInChallengeEvent.EventType.WaitForAnswer(event.challenge))
+            val evt = if (event.challenge.challengeName == "MFA_SETUP") {
+                 SignInChallengeEvent(SignInChallengeEvent.EventType.AssociateSoftwareToken(event.challenge))
+            } else {
+                SignInChallengeEvent(SignInChallengeEvent.EventType.WaitForAnswer(event.challenge))
+            }
             logger.verbose("$id Sending event ${evt.type}")
             dispatcher.send(evt)
         }
@@ -137,4 +142,13 @@ internal object SignInCognitoActions : SignInActions {
             logger.verbose("$id Sending event ${evt.type}")
             dispatcher.send(evt)
         }
+
+    override fun startSoftwareTokenSetupAction(event: SignInEvent.EventType.InitiateSoftwareTokenSetup) =
+        Action<AuthEnvironment>("StartSoftwareTokenSetup") { id, dispatcher ->
+            logger.verbose("$id Starting execution")
+            val evt = SetupSoftwareTokenEvent(SetupSoftwareTokenEvent.EventType.AssociateSoftwareToken(event.challenge))
+            logger.verbose("$id Sending event ${evt.type}")
+            dispatcher.send(evt)
+        }
+
 }

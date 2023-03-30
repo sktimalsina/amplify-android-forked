@@ -15,6 +15,7 @@
 
 package com.amplifyframework.statemachine
 
+import android.util.Log
 import java.util.UUID
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineExceptionHandler
@@ -186,6 +187,7 @@ internal open class StateMachine<StateType : State, EnvironmentType : Environmen
      */
     private fun process(event: StateMachineEvent) {
         val resolution = resolver.resolve(currentState, event)
+        //Log.d("StateMachine", "")
         if (currentState != resolution.newState) {
             currentState = resolution.newState
             val subscribersToRemove = subscribers.filter { !notifySubscribers(it, resolution.newState) }

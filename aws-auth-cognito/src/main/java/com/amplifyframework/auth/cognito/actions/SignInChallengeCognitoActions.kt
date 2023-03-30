@@ -15,8 +15,12 @@
 
 package com.amplifyframework.auth.cognito.actions
 
+import aws.sdk.kotlin.services.cognitoidentityprovider.associateSoftwareToken
 import aws.sdk.kotlin.services.cognitoidentityprovider.model.ChallengeNameType
 import aws.sdk.kotlin.services.cognitoidentityprovider.respondToAuthChallenge
+import aws.sdk.kotlin.services.cognitoidentityprovider.withConfig
+import aws.smithy.kotlin.runtime.auth.awscredentials.Credentials
+import aws.smithy.kotlin.runtime.auth.awscredentials.CredentialsProvider
 import com.amplifyframework.auth.cognito.AuthEnvironment
 import com.amplifyframework.auth.cognito.helpers.AuthHelper
 import com.amplifyframework.auth.cognito.helpers.SignInChallengeHelper
@@ -97,6 +101,7 @@ internal object SignInChallengeCognitoActions : SignInChallengeActions {
     private fun getChallengeResponseKey(challengeName: String): String? {
         return when (ChallengeNameType.fromValue(challengeName)) {
             is ChallengeNameType.SmsMfa -> "SMS_MFA_CODE"
+            is ChallengeNameType.SoftwareTokenMfa -> "SOFTWARE_TOKEN_MFA_CODE"
             is ChallengeNameType.NewPasswordRequired -> "NEW_PASSWORD"
             is ChallengeNameType.CustomChallenge -> "ANSWER"
             else -> null

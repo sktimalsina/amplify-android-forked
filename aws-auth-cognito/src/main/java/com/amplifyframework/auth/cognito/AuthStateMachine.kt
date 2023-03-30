@@ -28,9 +28,11 @@ import com.amplifyframework.auth.cognito.actions.SignInChallengeCognitoActions
 import com.amplifyframework.auth.cognito.actions.SignInCognitoActions
 import com.amplifyframework.auth.cognito.actions.SignInCustomCognitoActions
 import com.amplifyframework.auth.cognito.actions.SignOutCognitoActions
+import com.amplifyframework.auth.cognito.actions.StartCognitoSoftwareTokenActions
 import com.amplifyframework.statemachine.Environment
 import com.amplifyframework.statemachine.StateMachine
 import com.amplifyframework.statemachine.StateMachineResolver
+import com.amplifyframework.statemachine.codegen.actions.StartSoftwareTokenSetupActions
 import com.amplifyframework.statemachine.codegen.states.AuthState
 import com.amplifyframework.statemachine.codegen.states.AuthenticationState
 import com.amplifyframework.statemachine.codegen.states.AuthorizationState
@@ -43,6 +45,7 @@ import com.amplifyframework.statemachine.codegen.states.MigrateSignInState
 import com.amplifyframework.statemachine.codegen.states.RefreshSessionState
 import com.amplifyframework.statemachine.codegen.states.SRPSignInState
 import com.amplifyframework.statemachine.codegen.states.SignInChallengeState
+import com.amplifyframework.statemachine.codegen.states.SignInSetupSoftwareTokenState
 import com.amplifyframework.statemachine.codegen.states.SignInState
 import com.amplifyframework.statemachine.codegen.states.SignOutState
 
@@ -62,6 +65,7 @@ internal class AuthStateMachine(
                     SignInChallengeState.Resolver(SignInChallengeCognitoActions),
                     HostedUISignInState.Resolver(HostedUICognitoActions),
                     DeviceSRPSignInState.Resolver(DeviceSRPCognitoSignInActions),
+                    SignInSetupSoftwareTokenState.Resolver(StartCognitoSoftwareTokenActions),
                     SignInCognitoActions
                 ),
                 SignOutState.Resolver(SignOutCognitoActions),
@@ -93,6 +97,7 @@ internal class AuthStateMachine(
                         SignInChallengeState.Resolver(SignInChallengeCognitoActions).logging(),
                         HostedUISignInState.Resolver(HostedUICognitoActions).logging(),
                         DeviceSRPSignInState.Resolver(DeviceSRPCognitoSignInActions).logging(),
+                        SignInSetupSoftwareTokenState.Resolver(StartCognitoSoftwareTokenActions),
                         SignInCognitoActions
                     ).logging(),
                     SignOutState.Resolver(SignOutCognitoActions).logging(),

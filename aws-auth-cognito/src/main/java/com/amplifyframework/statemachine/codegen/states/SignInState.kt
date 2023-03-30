@@ -30,6 +30,9 @@ internal sealed class SignInState : State {
     data class SigningInWithSRPCustom(override var srpSignInState: SRPSignInState?) : SignInState()
     data class SigningInViaMigrateAuth(override var migrateSignInState: MigrateSignInState?) : SignInState()
     data class ResolvingDeviceSRP(override var deviceSRPSignInState: DeviceSRPSignInState?) : SignInState()
+    data class ResolvingSoftwareTokenSetup(override var signInSetupSoftwareTokenState: SignInSetupSoftwareTokenState?) :
+        SignInState()
+
     data class ResolvingChallenge(override var challengeState: SignInChallengeState?) : SignInState()
     data class ConfirmingDevice(val id: String = "") : SignInState()
     data class Done(val id: String = "") : SignInState()
@@ -42,6 +45,7 @@ internal sealed class SignInState : State {
     open var migrateSignInState: MigrateSignInState? = MigrateSignInState.NotStarted()
     open var hostedUISignInState: HostedUISignInState? = HostedUISignInState.NotStarted()
     open var deviceSRPSignInState: DeviceSRPSignInState? = DeviceSRPSignInState.NotStarted()
+    open var signInSetupSoftwareTokenState: SignInSetupSoftwareTokenState? = SignInSetupSoftwareTokenState.NotStarted()
 
     class Resolver(
         private val srpSignInResolver: StateMachineResolver<SRPSignInState>,
@@ -50,6 +54,7 @@ internal sealed class SignInState : State {
         private val challengeResolver: StateMachineResolver<SignInChallengeState>,
         private val hostedUISignInResolver: StateMachineResolver<HostedUISignInState>,
         private val deviceSRPSignInResolver: StateMachineResolver<DeviceSRPSignInState>,
+        private val softwareTokenSetupResolver: StateMachineResolver<SignInSetupSoftwareTokenState>,
         private val signInActions: SignInActions,
     ) :
         StateMachineResolver<SignInState> {
@@ -91,6 +96,11 @@ internal sealed class SignInState : State {
 
             oldState.deviceSRPSignInState?.let { deviceSRPSignInResolver.resolve(it, event) }?.let {
                 builder.deviceSRPSignInState = it.newState
+                actions += it.actions
+            }
+
+            oldState.signInSetupSoftwareTokenState?.let { softwareTokenSetupResolver.resolve(it, event) }?.let {
+                builder.softwareTokenSetupState = it.newState
                 actions += it.actions
             }
 
@@ -141,6 +151,10 @@ internal sealed class SignInState : State {
                         val action = signInActions.confirmDevice(signInEvent)
                         StateResolution(ConfirmingDevice(), listOf(action))
                     }
+                    is SignInEvent.EventType.InitiateSoftwareTokenSetup -> StateResolution(
+                        ResolvingSoftwareTokenSetup(SignInSetupSoftwareTokenState.NotStarted()),
+                        listOf(signInActions.startSoftwareTokenSetupAction(signInEvent))
+                    )
                     is SignInEvent.EventType.ThrowError -> StateResolution(Error(signInEvent.exception))
                     else -> defaultResolution
                 }
@@ -189,6 +203,7 @@ internal sealed class SignInState : State {
         var migrateSignInState: MigrateSignInState? = null
         var hostedUISignInState: HostedUISignInState? = null
         var deviceSRPSignInState: DeviceSRPSignInState? = null
+        var softwareTokenSetupState: SignInSetupSoftwareTokenState? = null
 
         override fun build(): SignInState = when (signInState) {
             is SigningInWithSRP -> SigningInWithSRP(srpSignInState)
@@ -198,6 +213,7 @@ internal sealed class SignInState : State {
             is SigningInWithHostedUI -> SigningInWithHostedUI(hostedUISignInState)
             is SigningInWithSRPCustom -> SigningInWithSRPCustom(srpSignInState)
             is ResolvingDeviceSRP -> ResolvingDeviceSRP(deviceSRPSignInState)
+            is ResolvingSoftwareTokenSetup -> ResolvingSoftwareTokenSetup(softwareTokenSetupState)
             else -> signInState
         }
     }

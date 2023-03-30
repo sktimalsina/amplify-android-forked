@@ -16,6 +16,7 @@
 package com.amplifyframework.statemachine.codegen.events
 
 import com.amplifyframework.statemachine.StateMachineEvent
+import com.amplifyframework.statemachine.codegen.data.AssociateSoftwareTokenData
 import com.amplifyframework.statemachine.codegen.data.AuthChallenge
 import com.amplifyframework.statemachine.codegen.data.DeviceMetadata
 import com.amplifyframework.statemachine.codegen.data.SignInData
@@ -48,6 +49,8 @@ internal class SignInEvent(val eventType: EventType, override val time: Date? = 
         ) : EventType()
 
         data class InitiateHostedUISignIn(val hostedUISignInData: SignInData.HostedUISignInData) : EventType()
+
+        data class InitiateSoftwareTokenSetup(val challenge: AuthChallenge) : EventType()
         data class SignedIn(val id: String = "") : EventType()
         data class InitiateSignInWithDeviceSRP(
             val username: String,
@@ -58,6 +61,7 @@ internal class SignInEvent(val eventType: EventType, override val time: Date? = 
             val deviceMetadata: DeviceMetadata.Metadata,
             val signedInData: SignedInData
         ) : EventType()
+
         data class FinalizeSignIn(val id: String = "") : EventType()
         data class ReceivedChallenge(val challenge: AuthChallenge) : EventType()
         data class ThrowError(val exception: Exception) : EventType()

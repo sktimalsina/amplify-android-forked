@@ -60,6 +60,12 @@ public enum AuthSignInStep {
 
     MFA_SETUP,
 
+
+    CONFIRM_SIGN_IN_WITH_SOFTWARE_TOKEN,
+    SETUP_TOTP_WITH_SECRET_CODE,
+
+    SELECT_MFA_TYPE,
+
     /**
      * No further steps are needed in the sign in flow.
      */

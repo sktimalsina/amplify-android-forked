@@ -76,10 +76,16 @@ internal object SignInChallengeHelper {
                     )
                 }
             }
+            challengeNameType is ChallengeNameType.MfaSetup-> {
+                val challenge =
+                    AuthChallenge(challengeNameType.value, username, session, challengeParameters)
+                SignInEvent(SignInEvent.EventType.InitiateSoftwareTokenSetup(challenge))
+            }
             challengeNameType is ChallengeNameType.SmsMfa ||
-                challengeNameType is ChallengeNameType.CustomChallenge ||
-                challengeNameType is ChallengeNameType.NewPasswordRequired ||
-                challengeNameType is ChallengeNameType.MfaSetup -> {
+                    challengeNameType is ChallengeNameType.CustomChallenge ||
+                    challengeNameType is ChallengeNameType.NewPasswordRequired ||
+                    challengeNameType is ChallengeNameType.SoftwareTokenMfa ||
+                    challengeNameType is ChallengeNameType.SelectMfaType -> {
                 val challenge =
                     AuthChallenge(challengeNameType.value, username, session, challengeParameters)
                 SignInEvent(SignInEvent.EventType.ReceivedChallenge(challenge))
@@ -125,13 +131,17 @@ internal object SignInChallengeHelper {
                 )
                 onSuccess.accept(authSignInResult)
             }
-            is ChallengeNameType.MfaSetup -> {
-                challenge.session?.let {
-                    challengeParams.put("SESSION", it)
-                }
+            is ChallengeNameType.SoftwareTokenMfa -> {
                 val authSignInResult = AuthSignInResult(
                     false,
-                    AuthNextSignInStep(AuthSignInStep.MFA_SETUP, challengeParams, null)
+                    AuthNextSignInStep(AuthSignInStep.CONFIRM_SIGN_IN_WITH_SOFTWARE_TOKEN, mapOf(), null)
+                )
+                onSuccess.accept(authSignInResult)
+            }
+            is ChallengeNameType.SelectMfaType -> {
+                val authSignInResult = AuthSignInResult(
+                    false,
+                    AuthNextSignInStep(AuthSignInStep.SELECT_MFA_TYPE, challengeParams, null)
                 )
                 onSuccess.accept(authSignInResult)
             }

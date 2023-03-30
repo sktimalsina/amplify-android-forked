@@ -201,23 +201,6 @@ internal object SRPCognitoActions : SRPActions {
                     encodedContextData?.let { userContextData { encodedData = it } }
                 }
                 if (response != null) {
-                    response.challengeName?.let { it ->
-                        if (it == ChallengeNameType.MfaSetup) {
-                            val associateTotp = cognitoAuthService.cognitoIdentityProviderClient?.withConfig {
-                                this.credentialsProvider = object: CredentialsProvider {
-                                    override suspend fun getCredentials(): Credentials {
-                                        logger.debug("getCredentials called")
-                                        return Credentials(accessKeyId = "ACCESS_KEY_ID", secretAccessKey = "SECRET_ACCESS_KEY", sessionToken = "SESSION_TOKEN")
-                                    }
-                                }
-                            }?.associateSoftwareToken {
-                                session = response.session
-                            }
-                            associateTotp?.let { res ->
-                                this.logger.info("Secret is ${res.secretCode}")
-                            }
-                        }
-                    }
                     SignInChallengeHelper.evaluateNextStep(
                         username,
                         response.challengeName,
