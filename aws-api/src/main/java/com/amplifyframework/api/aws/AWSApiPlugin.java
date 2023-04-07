@@ -137,6 +137,7 @@ public final class AWSApiPlugin extends ApiPlugin<Map<String, OkHttpClient>> {
             final ApiConfiguration apiConfiguration = entry.getValue();
             final EndpointType endpointType = apiConfiguration.getEndpointType();
             final OkHttpClient.Builder okHttpClientBuilder = new OkHttpClient.Builder();
+            TLS12OkHttpHelper.fixTLSPre22(okHttpClientBuilder);
             okHttpClientBuilder.addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string));
             okHttpClientBuilder.eventListener(new ApiConnectionEventListener());
 

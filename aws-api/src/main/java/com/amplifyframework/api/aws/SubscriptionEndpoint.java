@@ -85,10 +85,13 @@ final class SubscriptionEndpoint {
         this.authorizer = Objects.requireNonNull(authorizer);
         this.timeoutWatchdog = new TimeoutWatchdog();
         this.pendingSubscriptionIds = Collections.synchronizedSet(new HashSet<>());
-        this.okHttpClient = new OkHttpClient.Builder()
-            .addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string))
-            .retryOnConnectionFailure(true)
-            .build();
+
+        OkHttpClient.Builder builder = new OkHttpClient.Builder()
+                .addNetworkInterceptor(UserAgentInterceptor.using(UserAgent::string))
+                .retryOnConnectionFailure(true);
+        TLS12OkHttpHelper.fixTLSPre22(builder);
+
+        this.okHttpClient = builder.build();
     }
 
     synchronized <T> void requestSubscription(

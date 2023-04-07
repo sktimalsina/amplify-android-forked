@@ -20,6 +20,7 @@ import com.amplifyframework.core.Amplify
 import com.amplifyframework.geo.GeoCategory
 import com.amplifyframework.geo.location.AWSLocationGeoPlugin
 import com.amplifyframework.geo.maplibre.http.AWSRequestSignerInterceptor
+import com.amplifyframework.geo.maplibre.util.fixTLSPre22
 import com.amplifyframework.geo.models.MapStyle
 import com.amplifyframework.geo.options.GetMapStyleDescriptorOptions
 import com.mapbox.mapboxsdk.Mapbox
@@ -54,6 +55,7 @@ class AmplifyMapLibreAdapter internal constructor(
         Mapbox.getInstance(context, null, WellKnownTileServer.MapLibre)
         HttpRequestUtil.setOkHttpClient(
             OkHttpClient.Builder()
+                .fixTLSPre22()
                 .addInterceptor(AWSRequestSignerInterceptor(plugin))
                 .build()
         )
