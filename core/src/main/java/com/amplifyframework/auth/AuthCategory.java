@@ -34,6 +34,7 @@ import com.amplifyframework.auth.options.AuthUpdateUserAttributeOptions;
 import com.amplifyframework.auth.options.AuthUpdateUserAttributesOptions;
 import com.amplifyframework.auth.options.AuthWebUISignInOptions;
 import com.amplifyframework.auth.result.AuthResetPasswordResult;
+import com.amplifyframework.auth.result.AuthSetupSoftwareTokenResult;
 import com.amplifyframework.auth.result.AuthSignInResult;
 import com.amplifyframework.auth.result.AuthSignOutResult;
 import com.amplifyframework.auth.result.AuthSignUpResult;
@@ -121,11 +122,16 @@ public final class AuthCategory extends Category<AuthPlugin<?>> implements AuthC
         getSelectedPlugin().signIn(username, password, options, onSuccess, onError);
     }
 
-    @Override
-    public void setupTotp(@Nullable String username, @Nullable String session,
-                          @NonNull Consumer<AuthSignInResult> onSuccess, @NonNull Consumer<AuthException> onError) {
+    public void setupSoftwareToken(
+        Consumer<AuthSetupSoftwareTokenResult> onSuccess, @NonNull Consumer<AuthException> onError) {
         getSelectedPlugin().setupTotp(username, session, onSuccess, onError);
     }
+
+    public void verifySoftwareToken(
+        String verificationCode,
+        Consumer<AuthSetupSoftwareTokenResult> onSuccess,
+        @NonNull Consumer<AuthException> onError
+    )
 
     @Override
     public void signIn(
